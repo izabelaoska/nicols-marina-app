@@ -91,45 +91,76 @@ export default function MarinaCanvas() {
   // reset on touch end
   const handleTouchEnd = () => setLastDist(0)
 
-  return (
-    <Stage
-      ref={stageRef}
-      width={window.innerWidth}
-      height={window.innerHeight}
-      scaleX={stageScale}
-      scaleY={stageScale}
-      x={stagePos.x}
-      y={stagePos.y}
-      onClick={handleClick}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      style={{ touchAction: 'none', userSelect: 'none' }}
-    >
-      <Layer>
-        {/* Background image */}
-        {background && (
-          <KonvaImage
-            image={background}
-            x={0}
-            y={0}
-            width={window.innerWidth}
-            height={window.innerHeight}
-          />
-        )}
+  // 7) track device orientation
+  const [angle, setAngle] = useState(0)
+  useEffect(() => {
+    const update = () => {
+      // try Screen Orientation API first
+      const o =
+        (screen.orientation && screen.orientation.angle) ??
+        (window as any).orientation ??
+        0
+      setAngle(o as number)
+    }
+    window.addEventListener('orientationchange', update)
+    update()
+    return () => window.removeEventListener('orientationchange', update)
+  }, [])
 
-        {/* Berth circles */}
-        {berths.map((m) => (
-          <Circle
-            key={m.id}
-            x={m.position_x}
-            y={m.position_y}
-            radius={10}
-            fill={m.zajęte ? 'blue' : 'green'}
-            stroke="white"
-            strokeWidth={2}
-          />
-        ))}
-      </Layer>
-    </Stage>
+  const isLandscape = angle === 90 || angle === -90 || angle === 270
+
+  // swap dimensions when rotated
+  const width = isLandscape ? window.innerHeight : window.innerWidth
+  const height = isLandscape ? window.innerWidth : window.innerHeight
+
+  return (
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        overflow: 'hidden',
+        transform: isLandscape ? 'rotate(-90deg)' : undefined,
+        transformOrigin: 'center center',
+      }}
+    >
+      <Stage
+        ref={stageRef}
+        width={width}
+        height={height}
+        scaleX={stageScale}
+        scaleY={stageScale}
+        x={stagePos.x}
+        y={stagePos.y}
+        onClick={handleClick}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'none', userSelect: 'none' }}
+      >
+        <Layer>
+          {/* Background image */}
+          {background && (
+            <KonvaImage
+              image={background}
+              x={0}
+              y={0}
+              width={width}
+              height={height}
+            />
+          )}
+          {/* Berth circles */}
+          {berths.map((m) => (
+            <Circle
+              key={m.id}
+              x={m.position_x}
+              y={m.position_y}
+              radius={10}
+              fill={m.zajęte ? 'blue' : 'green'}
+              stroke="white"
+              strokeWidth={2}
+            />
+          ))}
+        </Layer>
+      </Stage>
+    </div>
   )
 }
