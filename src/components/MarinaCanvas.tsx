@@ -11,105 +11,104 @@ type Miejsce = {
 }
 
 export default function MarinaCanvas() {
-  // 1) berth data
+  // 1) berths + image
   const [berths, setBerths] = useState<Miejsce[]>([])
-  // 2) background image
   const [background] = useImage('/marina-layout.png')
 
-  // 3) zoom & pan state
+  // 2) refs + pan/zoom state
   const stageRef = useRef<any>(null)
-  const [stageScale, setStageScale] = useState(1)
-  const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
+  const [scale, setScale] = useState(1)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
   const [lastDist, setLastDist] = useState(0)
 
-  // 4) load from Supabase
+  // 3) initial fit scale
+  const [initialScale, setInitialScale] = useState(1)
   useEffect(() => {
-    ;(async () => {
-      const { data } = await supabase.from('MiejscaPostojowe').select('*')
-      if (data) setBerths(data as Miejsce[])
-    })()
+    if (!background) return
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const imgW = background.width
+    const imgH = background.height
+    // fill without squish: pick the larger ratio
+    const fit = Math.max(vw / imgW, vh / imgH)
+    setInitialScale(fit)
+    setScale(fit)
+    // center image
+    setPos({ x: (vw - imgW * fit) / 2, y: (vh - imgH * fit) / 2 })
+  }, [background])
+
+  // 4) load existing berths
+  useEffect(() => {
+    supabase
+      .from('MiejscaPostojowe')
+      .select('*')
+      .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
-  // 5) single-tap: add a berth
+  // 5) tap to add berth
   const handleClick = async (e: any) => {
     const stage = stageRef.current!
-    const pointer = stage.getPointerPosition()
-    if (!pointer) return
-
+    const p = stage.getPointerPosition()
+    if (!p) return
     if (
       !window.confirm(
-        `Dodać nowe miejsce? (x: ${Math.round(pointer.x)}, y: ${Math.round(
-          pointer.y
-        )})`
+        `Dodać nowe miejsce? (x:${Math.round(p.x)}, y:${Math.round(p.y)})`
       )
-    ) {
+    )
       return
-    }
 
     const { data } = await supabase
       .from('MiejscaPostojowe')
-      .insert({
-        position_x: pointer.x,
-        position_y: pointer.y,
-        zajęte: false,
-      })
+      .insert({ position_x: p.x, position_y: p.y, zajęte: false })
       .select()
       .single()
-
-    if (data) {
-      setBerths((prev) => [...prev, data as Miejsce])
-    }
+    if (data) setBerths((b) => [...b, data as Miejsce])
   }
 
-  // 6) pinch-to-zoom handler
+  // 6) pinch-to-zoom & pan
   const handleTouchMove = (e: any) => {
     const evt = e.evt as TouchEvent
     if (evt.touches.length !== 2) return
     evt.preventDefault()
-
     const [t1, t2] = [evt.touches[0], evt.touches[1]]
     const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
-
     if (!lastDist) {
       setLastDist(dist)
       return
     }
+    const change = dist / lastDist
+    let newScale = scale * change
+    if (newScale < initialScale) newScale = initialScale
 
-    const scaleChange = dist / lastDist
-    const newScale = stageScale * scaleChange
+    // zoom focal
+    const cx = (t1.clientX + t2.clientX) / 2
+    const cy = (t1.clientY + t2.clientY) / 2
+    const x = cx - (cx - pos.x) * (newScale / scale)
+    const y = cy - (cy - pos.y) * (newScale / scale)
 
-    const centerX = (t1.clientX + t2.clientX) / 2
-    const centerY = (t1.clientY + t2.clientY) / 2
-    const x = centerX - (centerX - stagePos.x) * scaleChange
-    const y = centerY - (centerY - stagePos.y) * scaleChange
-
-    setStageScale(newScale)
-    setStagePos({ x, y })
+    setScale(newScale)
+    setPos({ x, y })
     setLastDist(dist)
   }
-
-  // reset on touch end
   const handleTouchEnd = () => setLastDist(0)
 
-  // 7) track device orientation
+  // 7) always portrait on mobile (rotate −90°)
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent)
+  // detect landscape so we rotate back
   const [angle, setAngle] = useState(0)
   useEffect(() => {
-    const update = () => {
-      // try Screen Orientation API first
-      const o =
-        (screen.orientation && screen.orientation.angle) ??
-        (window as any).orientation ??
-        0
-      setAngle(o as number)
+    const upd = () => {
+      const a = screen.orientation?.angle ?? (window as any).orientation ?? 0
+      setAngle(a as number)
     }
-    window.addEventListener('orientationchange', update)
-    update()
-    return () => window.removeEventListener('orientationchange', update)
+    window.addEventListener('orientationchange', upd)
+    upd()
+    return () => window.removeEventListener('orientationchange', upd)
   }, [])
+  const isLandscape =
+    isMobile && (angle === 90 || angle === -90 || angle === 270)
 
-  const isLandscape = angle === 90 || angle === -90 || angle === 270
-
-  // swap dimensions when rotated
+  // canvas dims (swap on landscape)
   const width = isLandscape ? window.innerHeight : window.innerWidth
   const height = isLandscape ? window.innerWidth : window.innerHeight
 
@@ -127,27 +126,29 @@ export default function MarinaCanvas() {
         ref={stageRef}
         width={width}
         height={height}
-        scaleX={stageScale}
-        scaleY={stageScale}
-        x={stagePos.x}
-        y={stagePos.y}
+        x={pos.x}
+        y={pos.y}
+        scaleX={scale}
+        scaleY={scale}
         onClick={handleClick}
+        onTap={handleClick}
+        onTouchStart={(e) => {
+          if ((e.evt as TouchEvent).touches.length === 1) handleClick(e)
+        }}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ touchAction: 'none', userSelect: 'none' }}
       >
         <Layer>
-          {/* Background image */}
           {background && (
             <KonvaImage
               image={background}
               x={0}
               y={0}
-              width={width}
-              height={height}
+              width={background.width}
+              height={background.height}
             />
           )}
-          {/* Berth circles */}
           {berths.map((m) => (
             <Circle
               key={m.id}
