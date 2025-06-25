@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Stage, Layer, Circle, Image as KonvaImage } from 'react-konva'
 import useImage from 'use-image'
 import { supabase } from '../lib/supabaseClient'
@@ -11,33 +11,45 @@ type Miejsce = {
 }
 
 export default function MarinaCanvas() {
-  // 1) berths + image
+  // 1) Data + image
   const [berths, setBerths] = useState<Miejsce[]>([])
   const [background] = useImage('/marina-layout.png')
 
-  // 2) refs + pan/zoom state
+  // 2) Canvas refs + transform state
   const stageRef = useRef<any>(null)
   const [scale, setScale] = useState(1)
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [lastDist, setLastDist] = useState(0)
-
-  // 3) initial fit scale
   const [initialScale, setInitialScale] = useState(1)
-  useEffect(() => {
-    if (!background) return
+
+  // 3) Dimensions (swap for rotated)
+  const [dims, setDims] = useState({
+    w: window.innerWidth,
+    h: window.innerHeight,
+  })
+
+  // recalc dims & fit scale on load, resize or when bg arrives
+  const recomputeLayout = useCallback(() => {
     const vw = window.innerWidth
     const vh = window.innerHeight
-    const imgW = background.width
-    const imgH = background.height
-    // fill without squish: pick the larger ratio
-    const fit = Math.max(vw / imgW, vh / imgH)
+    setDims({ w: vw, h: vh })
+    if (!background) return
+    const fit = Math.max(vw / background.width, vh / background.height)
     setInitialScale(fit)
     setScale(fit)
-    // center image
-    setPos({ x: (vw - imgW * fit) / 2, y: (vh - imgH * fit) / 2 })
+    setPos({
+      x: (vw - background.width * fit) / 2,
+      y: (vh - background.height * fit) / 2,
+    })
   }, [background])
 
-  // 4) load existing berths
+  useEffect(() => {
+    recomputeLayout()
+    window.addEventListener('resize', recomputeLayout)
+    return () => window.removeEventListener('resize', recomputeLayout)
+  }, [recomputeLayout])
+
+  // 4) Fetch berths once
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
@@ -45,8 +57,10 @@ export default function MarinaCanvas() {
       .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
-  // 5) tap to add berth
-  const handleClick = async (e: any) => {
+  // 5) Single-finger tap only fires onTap; guard against pinch
+  const handleTap = async (e: any) => {
+    // if two touches are down, bail
+    if ((e.evt as TouchEvent).touches?.length > 1) return
     const stage = stageRef.current!
     const p = stage.getPointerPosition()
     if (!p) return
@@ -65,7 +79,7 @@ export default function MarinaCanvas() {
     if (data) setBerths((b) => [...b, data as Miejsce])
   }
 
-  // 6) pinch-to-zoom & pan
+  // 6) Pinch-to-zoom & pan
   const handleTouchMove = (e: any) => {
     const evt = e.evt as TouchEvent
     if (evt.touches.length !== 2) return
@@ -80,7 +94,6 @@ export default function MarinaCanvas() {
     let newScale = scale * change
     if (newScale < initialScale) newScale = initialScale
 
-    // zoom focal
     const cx = (t1.clientX + t2.clientX) / 2
     const cy = (t1.clientY + t2.clientY) / 2
     const x = cx - (cx - pos.x) * (newScale / scale)
@@ -92,9 +105,8 @@ export default function MarinaCanvas() {
   }
   const handleTouchEnd = () => setLastDist(0)
 
-  // 7) always portrait on mobile (rotate −90°)
+  // 7) Portrait-only wrapper on mobile
   const isMobile = /Mobi|Android/i.test(navigator.userAgent)
-  // detect landscape so we rotate back
   const [angle, setAngle] = useState(0)
   useEffect(() => {
     const upd = () => {
@@ -108,9 +120,9 @@ export default function MarinaCanvas() {
   const isLandscape =
     isMobile && (angle === 90 || angle === -90 || angle === 270)
 
-  // canvas dims (swap on landscape)
-  const width = isLandscape ? window.innerHeight : window.innerWidth
-  const height = isLandscape ? window.innerWidth : window.innerHeight
+  // final canvas size
+  const width = isLandscape ? dims.h : dims.w
+  const height = isLandscape ? dims.w : dims.h
 
   return (
     <div
@@ -130,11 +142,8 @@ export default function MarinaCanvas() {
         y={pos.y}
         scaleX={scale}
         scaleY={scale}
-        onClick={handleClick}
-        onTap={handleClick}
-        onTouchStart={(e) => {
-          if ((e.evt as TouchEvent).touches.length === 1) handleClick(e)
-        }}
+        onTap={handleTap}
+        onClick={handleTap}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ touchAction: 'none', userSelect: 'none' }}
