@@ -11,11 +11,11 @@ type Miejsce = {
 }
 
 export default function MarinaCanvas() {
-  // 1) Data + image
+  // 1) State: berths + background image
   const [berths, setBerths] = useState<Miejsce[]>([])
   const [background] = useImage('/marina-layout.png')
 
-  // 2) Canvas refs + transform state
+  // 2) Transform state
   const stageRef = useRef<any>(null)
   const [scale, setScale] = useState(1)
   const [pos, setPos] = useState({ x: 0, y: 0 })
@@ -23,17 +23,17 @@ export default function MarinaCanvas() {
   const [initialScale, setInitialScale] = useState(1)
   const pinchRef = useRef(false)
 
-  // 3) Dimensions (swap for rotated)
+  // 3) Viewport dims
   const [dims, setDims] = useState({
     w: window.innerWidth,
     h: window.innerHeight,
   })
-
   const recomputeLayout = useCallback(() => {
     const vw = window.innerWidth
     const vh = window.innerHeight
     setDims({ w: vw, h: vh })
     if (!background) return
+    // fit so the entire marina shows
     const fit = Math.max(vw / background.width, vh / background.height)
     setInitialScale(fit)
     setScale(fit)
@@ -53,7 +53,7 @@ export default function MarinaCanvas() {
     }
   }, [recomputeLayout])
 
-  // 4) Fetch berths once
+  // 4) Load berths
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
@@ -61,22 +61,22 @@ export default function MarinaCanvas() {
       .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
-  // 5) Portrait / landscape detection (only to swap w/h)
+  // 5) Detect orientation (just to swap w & h)
   const isMobile = /Mobi|Android/i.test(navigator.userAgent)
   const [angle, setAngle] = useState(0)
   useEffect(() => {
-    const upd = () => {
+    const handler = () => {
       const a = screen.orientation?.angle ?? (window as any).orientation ?? 0
       setAngle(a as number)
     }
-    window.addEventListener('orientationchange', upd)
-    upd()
-    return () => window.removeEventListener('orientationchange', upd)
+    window.addEventListener('orientationchange', handler)
+    handler()
+    return () => window.removeEventListener('orientationchange', handler)
   }, [])
   const isLandscape =
     isMobile && (angle === 90 || angle === -90 || angle === 270)
 
-  // final canvas size
+  // 6) Final stage dimensions
   const width = isLandscape ? dims.h : dims.w
   const height = isLandscape ? dims.w : dims.h
 
@@ -86,6 +86,8 @@ export default function MarinaCanvas() {
         width: '100vw',
         height: '100vh',
         overflow: 'hidden',
+        touchAction: 'none', // <–– prevent browser pinch default
+        userSelect: 'none',
       }}
     >
       <Stage
@@ -96,7 +98,6 @@ export default function MarinaCanvas() {
         y={pos.y}
         scaleX={scale}
         scaleY={scale}
-        // Gesture-based pinch-to-zoom
         onGestureStart={(e) => {
           e.evt.preventDefault()
           pinchRef.current = true
@@ -114,14 +115,12 @@ export default function MarinaCanvas() {
             setLastDist(dist)
             return
           }
-
-          const change = dist / lastDist
-          if (change <= 1) {
-            // ignore “pinch in” (no zoom out)
+          const delta = dist / lastDist
+          if (delta <= 1) {
+            // no zoom out
             return
           }
-
-          const newScale = Math.max(initialScale, scale * change)
+          const newScale = Math.max(initialScale, scale * delta)
           const cx = (t1.clientX + t2.clientX) / 2
           const cy = (t1.clientY + t2.clientY) / 2
 
@@ -134,7 +133,7 @@ export default function MarinaCanvas() {
         }}
         onGestureEnd={() => {
           setLastDist(0)
-          // clear the pinch‐flag after Konva finishes its internal tap logic
+          // allow subsequent taps/pinches to fire
           setTimeout(() => {
             pinchRef.current = false
           }, 0)
