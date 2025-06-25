@@ -21,6 +21,7 @@ export default function MarinaCanvas() {
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [lastDist, setLastDist] = useState(0)
   const [initialScale, setInitialScale] = useState(1)
+  const pinchRef = useRef(false)
 
   // 3) Dimensions (swap for rotated)
   const [dims, setDims] = useState({
@@ -28,7 +29,6 @@ export default function MarinaCanvas() {
     h: window.innerHeight,
   })
 
-  // recalc dims & fit scale on load, resize or when bg arrives
   const recomputeLayout = useCallback(() => {
     const vw = window.innerWidth
     const vh = window.innerHeight
@@ -46,7 +46,11 @@ export default function MarinaCanvas() {
   useEffect(() => {
     recomputeLayout()
     window.addEventListener('resize', recomputeLayout)
-    return () => window.removeEventListener('resize', recomputeLayout)
+    window.addEventListener('orientationchange', recomputeLayout)
+    return () => {
+      window.removeEventListener('resize', recomputeLayout)
+      window.removeEventListener('orientationchange', recomputeLayout)
+    }
   }, [recomputeLayout])
 
   // 4) Fetch berths once
@@ -57,55 +61,7 @@ export default function MarinaCanvas() {
       .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
-  // 5) Single-finger tap only fires onTap; guard against pinch
-  const handleTap = async (e: any) => {
-    // if two touches are down, bail
-    if ((e.evt as TouchEvent).touches?.length > 1) return
-    const stage = stageRef.current!
-    const p = stage.getPointerPosition()
-    if (!p) return
-    if (
-      !window.confirm(
-        `Dodać nowe miejsce? (x:${Math.round(p.x)}, y:${Math.round(p.y)})`
-      )
-    )
-      return
-
-    const { data } = await supabase
-      .from('MiejscaPostojowe')
-      .insert({ position_x: p.x, position_y: p.y, zajęte: false })
-      .select()
-      .single()
-    if (data) setBerths((b) => [...b, data as Miejsce])
-  }
-
-  // 6) Pinch-to-zoom & pan
-  const handleTouchMove = (e: any) => {
-    const evt = e.evt as TouchEvent
-    if (evt.touches.length !== 2) return
-    evt.preventDefault()
-    const [t1, t2] = [evt.touches[0], evt.touches[1]]
-    const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
-    if (!lastDist) {
-      setLastDist(dist)
-      return
-    }
-    const change = dist / lastDist
-    let newScale = scale * change
-    if (newScale < initialScale) newScale = initialScale
-
-    const cx = (t1.clientX + t2.clientX) / 2
-    const cy = (t1.clientY + t2.clientY) / 2
-    const x = cx - (cx - pos.x) * (newScale / scale)
-    const y = cy - (cy - pos.y) * (newScale / scale)
-
-    setScale(newScale)
-    setPos({ x, y })
-    setLastDist(dist)
-  }
-  const handleTouchEnd = () => setLastDist(0)
-
-  // 7) Portrait-only wrapper on mobile
+  // 5) Portrait / landscape detection (only to swap w/h)
   const isMobile = /Mobi|Android/i.test(navigator.userAgent)
   const [angle, setAngle] = useState(0)
   useEffect(() => {
@@ -130,8 +86,6 @@ export default function MarinaCanvas() {
         width: '100vw',
         height: '100vh',
         overflow: 'hidden',
-        transform: isLandscape ? 'rotate(-90deg)' : undefined,
-        transformOrigin: 'center center',
       }}
     >
       <Stage
@@ -142,10 +96,49 @@ export default function MarinaCanvas() {
         y={pos.y}
         scaleX={scale}
         scaleY={scale}
-        onTap={handleTap}
-        onClick={handleTap}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        // Gesture-based pinch-to-zoom
+        onGestureStart={(e) => {
+          e.evt.preventDefault()
+          pinchRef.current = true
+          setLastDist(0)
+        }}
+        onGestureChange={(e) => {
+          const touches = (e.evt as TouchEvent).touches
+          if (touches.length !== 2) return
+          const [t1, t2] = touches
+          const dist = Math.hypot(
+            t2.clientX - t1.clientX,
+            t2.clientY - t1.clientY
+          )
+          if (!lastDist) {
+            setLastDist(dist)
+            return
+          }
+
+          const change = dist / lastDist
+          if (change <= 1) {
+            // ignore “pinch in” (no zoom out)
+            return
+          }
+
+          const newScale = Math.max(initialScale, scale * change)
+          const cx = (t1.clientX + t2.clientX) / 2
+          const cy = (t1.clientY + t2.clientY) / 2
+
+          setPos({
+            x: cx - (cx - pos.x) * (newScale / scale),
+            y: cy - (cy - pos.y) * (newScale / scale),
+          })
+          setScale(newScale)
+          setLastDist(dist)
+        }}
+        onGestureEnd={() => {
+          setLastDist(0)
+          // clear the pinch‐flag after Konva finishes its internal tap logic
+          setTimeout(() => {
+            pinchRef.current = false
+          }, 0)
+        }}
         style={{ touchAction: 'none', userSelect: 'none' }}
       >
         <Layer>
