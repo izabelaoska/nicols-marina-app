@@ -54,16 +54,16 @@ export default function MarinaCanvas() {
     }
   }, [fitToScreen])
 
-  // refs for touch logic
+  // 3) Touch/pinch/pan/tap refs
   const stageRef = useRef<any>(null)
   const pointers = useRef<Record<number, { x: number; y: number }>>({})
   const lastDist = useRef(0)
   const hasPinched = useRef(false)
-  const TAP_THRESHOLD = 6
   const hasPanned = useRef(false)
   const tapStart = useRef<{ x: number; y: number } | null>(null)
+  const TAP_THRESHOLD = 6
 
-  // clamp a given pos so the image always covers the viewport
+  // clamp so the image always covers the viewport
   function clampPos(x: number, y: number) {
     if (!background) return { x, y }
     const wScaled = background.width * scale
@@ -72,7 +72,6 @@ export default function MarinaCanvas() {
     const maxX = 0
     const minY = Math.min(0, dims.h - hScaled)
     const maxY = 0
-
     return {
       x: Math.max(minX, Math.min(x, maxX)),
       y: Math.max(minY, Math.min(y, maxY)),
@@ -93,12 +92,12 @@ export default function MarinaCanvas() {
 
   const onTouchMove: React.TouchEventHandler = (e) => {
     const ids = Object.keys(pointers.current)
-    // PINCH (two fingers)
+    // PINCH
     if (ids.length === 2) {
       hasPinched.current = true
       e.preventDefault()
       for (const t of Array.from(e.touches)) {
-        if (pointers.current[t.identifier] != null) {
+        if (pointers.current[t.identifier]) {
           pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
         }
       }
@@ -111,7 +110,7 @@ export default function MarinaCanvas() {
       const ratio = dist / lastDist.current
       const newScale = Math.max(initialScale, scale * ratio)
 
-      // recenter on pinch midpoint
+      // recenter on midpoint
       const cx = (p1.x + p2.x) / 2
       const cy = (p1.y + p2.y) / 2
       const newX = cx - (cx - pos.x) * (newScale / scale)
@@ -136,18 +135,16 @@ export default function MarinaCanvas() {
       if (Math.hypot(dx, dy) > TAP_THRESHOLD) {
         hasPanned.current = true
       }
-
       const unclampedX = pos.x + dx
       const unclampedY = pos.y + dy
-      const clamped = clampPos(unclampedX, unclampedY)
-      setPos(clamped)
+      setPos(clampPos(unclampedX, unclampedY))
 
       pointers.current[id] = { x: t.clientX, y: t.clientY }
     }
   }
 
   const onTouchEnd: React.TouchEventHandler = async (e) => {
-    // TAP
+    // TAP?
     if (
       !hasPinched.current &&
       !hasPanned.current &&
@@ -159,16 +156,22 @@ export default function MarinaCanvas() {
       const dx = t.clientX - tapStart.current.x
       const dy = t.clientY - tapStart.current.y
       if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
-        const p = stageRef.current.getPointerPosition()
+        // compute canvas coords from raw touch
+        const canvasX = (t.clientX - pos.x) / scale
+        const canvasY = (t.clientY - pos.y) / scale
+
         if (
-          p &&
           window.confirm(
-            `Add berth at x:${Math.round(p.x)} y:${Math.round(p.y)}?`
+            `Add berth at x:${Math.round(canvasX)} y:${Math.round(canvasY)}?`
           )
         ) {
           const { data } = await supabase
             .from('MiejscaPostojowe')
-            .insert({ position_x: p.x, position_y: p.y, zajęte: false })
+            .insert({
+              position_x: canvasX,
+              position_y: canvasY,
+              zajęte: false,
+            })
             .select()
             .single()
           if (data) setBerths((b) => [...b, data as Miejsce])
@@ -176,7 +179,7 @@ export default function MarinaCanvas() {
       }
     }
 
-    // cleanup
+    // clean up
     for (const t of Array.from(e.changedTouches)) {
       delete pointers.current[t.identifier]
     }
