@@ -1,27 +1,42 @@
-// App.tsx
-import { useState, useEffect } from 'react'
+// src/App.tsx
+import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabaseClient'
-import MarinaCanvas from './components/MarinaCanvas'
 import SignInModal from './components/SignInModal'
+import MarinaCanvas from './components/MarinaCanvas'
+import type { Session } from '@supabase/supabase-js'
 
 export default function App() {
-  const [session, setSession] = useState(supabase.auth.getSession())
+  // 1) Start with no session
+  const [session, setSession] = useState<Session | null>(null)
 
   useEffect(() => {
-    // subscribe to auth changes (link click, sign out, etc)
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_, newSession) => {
-        setSession(newSession)
-      }
-    )
+    // 2) On mount, check if there's already a logged-in session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    // 3) Subscribe to any future sign-in / sign-out events
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    // 4) Cleanup on unmount
     return () => {
-      listener.subscription.unsubscribe()
+      subscription.unsubscribe()
     }
   }, [])
 
+  // 5) If not signed in yet, show your magic-link form
   if (!session) {
     return <SignInModal />
   }
 
-  return <MarinaCanvas />
+  // 6) Otherwise render the marina canvas
+  return (
+    <div className="h-screen w-screen">
+      <MarinaCanvas />
+    </div>
+  )
 }
