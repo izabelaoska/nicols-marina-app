@@ -1,3 +1,4 @@
+// components/SignInModal.tsx
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
@@ -6,36 +7,52 @@ export default function SignInModal() {
   const [message, setMessage] = useState<string | null>(null)
 
   const handleSendLink = async () => {
+    setMessage(null)
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: window.location.origin },
     })
     if (error) {
-      setMessage('Failed to send link – check console.')
       console.error(error)
+      setMessage('Nie udało się wysłać linku. Sprawdź konsolę.')
     } else {
-      setMessage(`Magic link sent! Check ${email}.`)
+      setMessage(`Link wysłany na ${email}. Sprawdź skrzynkę.`)
     }
   }
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow">
-        <h2 className="mb-4 text-xl font-semibold">Sign in</h2>
-        <input
-          type="email"
-          placeholder="you@example.com"
-          className="mb-3 w-full rounded border px-3 py-2"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <button
-          onClick={handleSendLink}
-          className="w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Send magic link
-        </button>
-        {message && <p className="mt-3 text-sm text-gray-600">{message}</p>}
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/50 z-50 p-4">
+      <h1 className="text-4xl font-semibold text-white mb-6 italic">
+        Nicol’s Marina
+      </h1>
+
+      <div className="modal-box modal-bottom sm:modal-middle w-full sm:w-96 max-h-[90vh] overflow-y-auto p-10">
+        <h2 className="text-xl font-semibold mb-4">Zaloguj się do systemu</h2>
+
+        <label className="block mb-4">
+          <span className="label-text text-lg">Adres e-mail</span>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            className="input input-bordered w-full mt-1"
+            value={email}
+            onChange={(e) => setEmail(e.currentTarget.value)}
+          />
+        </label>
+
+        <div className="modal-action justify-start">
+          <button
+            onClick={handleSendLink}
+            className="btn btn-primary"
+            disabled={!email}
+          >
+            Wyślij link
+          </button>
+        </div>
+
+        {message && (
+          <p className="mt-2 text-sm text-center text-gray-600">{message}</p>
+        )}
       </div>
     </div>
   )
