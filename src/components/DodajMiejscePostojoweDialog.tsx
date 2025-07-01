@@ -6,6 +6,7 @@ export interface DodajMiejscePostojoweValues {
   end: string
   amount: number
   phone: string
+  uwagi?: string
 }
 
 export function DodajMiejscePostojoweDialog({
@@ -27,6 +28,7 @@ export function DodajMiejscePostojoweDialog({
   const [end, setEnd] = useState('')
   const [amount, setAmount] = useState('')
   const [phone, setPhone] = useState('')
+  const [remarks, setRemarks] = useState('')
 
   useEffect(() => {
     if (open) {
@@ -35,20 +37,24 @@ export function DodajMiejscePostojoweDialog({
       setEnd('')
       setAmount('')
       setPhone('')
+      setRemarks('')
     }
   }, [open])
 
   const handleSave = () => {
-    if (initialPos) {
-      onSave(initialPos, {
-        tenant,
-        start,
-        end,
-        amount: Number(amount),
-        phone,
-      })
-    }
+    if (!initialPos) return
+    onSave(initialPos, {
+      tenant,
+      start,
+      end,
+      amount: Number(amount),
+      phone,
+      ...(remarks.trim() ? { uwagi: remarks.trim() } : {}),
+    })
   }
+
+  const canSave =
+    tenant.trim() && start.trim() && end.trim() && amount.trim() && phone.trim()
 
   return (
     <div className={`modal ${open ? 'modal-open' : ''}`}>
@@ -109,6 +115,17 @@ export function DodajMiejscePostojoweDialog({
               onChange={(e) => setPhone(e.currentTarget.value)}
             />
           </label>
+
+          <label className="block">
+            <span className="label-text">Uwagi (opcjonalnie)</span>
+            <textarea
+              placeholder="np. kajak, mała łódź, motorówka"
+              className="textarea textarea-bordered w-full"
+              rows={3}
+              value={remarks}
+              onChange={(e) => setRemarks(e.currentTarget.value)}
+            />
+          </label>
         </div>
 
         <div className="modal-action mt-6">
@@ -118,7 +135,7 @@ export function DodajMiejscePostojoweDialog({
           <button
             className="btn btn-primary"
             onClick={handleSave}
-            disabled={!tenant || !start || !end || !amount || !phone}
+            disabled={!canSave}
           >
             Zapisz
           </button>
