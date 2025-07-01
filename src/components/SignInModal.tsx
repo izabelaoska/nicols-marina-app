@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-export default function LoginScreen() {
+export default function SignInModal() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 

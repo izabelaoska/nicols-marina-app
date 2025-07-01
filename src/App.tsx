@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import MarinaCanvas from './components/MarinaCanvas'
-import { SignInModal } from './components/SignInModal'
+import SignInModal from './components/SignInModal'
 
 export default function App() {
   const [session, setSession] = useState(supabase.auth.getSession())
