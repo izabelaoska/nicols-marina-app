@@ -78,6 +78,31 @@ export default function MarinaCanvas() {
     }
   }
 
+  // 4) Desktop click to add berth
+  const handleClick = async (e: any) => {
+    // raw viewport coords of the mouse event
+    const { clientX, clientY } = e.evt as MouseEvent
+
+    // convert to canvas coords by unapplying pan & zoom
+    const canvasX = (clientX - pos.x) / scale
+    const canvasY = (clientY - pos.y) / scale
+
+    if (
+      !window.confirm(
+        `Add berth at x:${Math.round(canvasX)} y:${Math.round(canvasY)}?`
+      )
+    ) {
+      return
+    }
+    const { data } = await supabase
+      .from('MiejscaPostojowe')
+      .insert({ position_x: canvasX, position_y: canvasY, zajęte: false })
+      .select()
+      .single()
+    if (data) setBerths((b) => [...b, data as Miejsce])
+  }
+
+  // 5) Touch handlers
   const onTouchStart: React.TouchEventHandler = (e) => {
     for (const t of Array.from(e.changedTouches)) {
       pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
@@ -156,7 +181,7 @@ export default function MarinaCanvas() {
       const dx = t.clientX - tapStart.current.x
       const dy = t.clientY - tapStart.current.y
       if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
-        // compute canvas coords from raw touch
+        // raw touch → canvas coords
         const canvasX = (t.clientX - pos.x) / scale
         const canvasY = (t.clientY - pos.y) / scale
 
@@ -179,7 +204,7 @@ export default function MarinaCanvas() {
       }
     }
 
-    // clean up
+    // cleanup
     for (const t of Array.from(e.changedTouches)) {
       delete pointers.current[t.identifier]
     }
@@ -189,6 +214,7 @@ export default function MarinaCanvas() {
     tapStart.current = null
   }
 
+  // 6) Render
   return (
     <div
       style={{
@@ -210,6 +236,7 @@ export default function MarinaCanvas() {
         y={pos.y}
         scaleX={scale}
         scaleY={scale}
+        onClick={handleClick}
         style={{ background: '#fafafa' }}
       >
         <Layer>
