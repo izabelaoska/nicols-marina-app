@@ -1,7 +1,9 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { Stage, Layer, Circle, Image as KonvaImage } from 'react-konva'
 import useImage from 'use-image'
 import { supabase } from '../lib/supabaseClient'
+import type { DodajMiejscePostojoweValues } from '../components/DodajMiejscePostojoweDialog'
+import { DodajMiejscePostojoweDialog } from '../components/DodajMiejscePostojoweDialog'
 
 type Miejsce = {
   id: string
@@ -11,7 +13,7 @@ type Miejsce = {
 }
 
 export default function MarinaCanvas() {
-  // 1) Load background + berths
+  // 1) Background + existing berths
   const [background] = useImage('/marina-layout.png')
   const [berths, setBerths] = useState<Miejsce[]>([])
   useEffect(() => {
@@ -21,7 +23,7 @@ export default function MarinaCanvas() {
       .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
-  // 2) Fit + pan/zoom state
+  // 2) Fit + pan/zoom
   const [dims, setDims] = useState({
     w: window.innerWidth,
     h: window.innerHeight,
@@ -54,7 +56,7 @@ export default function MarinaCanvas() {
     }
   }, [fitToScreen])
 
-  // 3) Touch/pinch/pan/tap refs
+  // 3) Touch/pinch/pan refs & helpers (unchanged) …
   const stageRef = useRef<any>(null)
   const pointers = useRef<Record<number, { x: number; y: number }>>({})
   const lastDist = useRef(0)
@@ -63,7 +65,6 @@ export default function MarinaCanvas() {
   const tapStart = useRef<{ x: number; y: number } | null>(null)
   const TAP_THRESHOLD = 6
 
-  // clamp so the image always covers the viewport
   function clampPos(x: number, y: number) {
     if (!background) return { x, y }
     const wScaled = background.width * scale
@@ -78,31 +79,25 @@ export default function MarinaCanvas() {
     }
   }
 
-  // 4) Desktop click to add berth
-  const handleClick = async (e: any) => {
-    // raw viewport coords of the mouse event
-    const { clientX, clientY } = e.evt as MouseEvent
+  // 4) Dialog state
+  const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
+    null
+  )
 
-    // convert to canvas coords by unapplying pan & zoom
+  // 5) Common fn to open dialog at canvas coords
+  const openDialogAt = (clientX: number, clientY: number) => {
     const canvasX = (clientX - pos.x) / scale
     const canvasY = (clientY - pos.y) / scale
-
-    if (
-      !window.confirm(
-        `Add berth at x:${Math.round(canvasX)} y:${Math.round(canvasY)}?`
-      )
-    ) {
-      return
-    }
-    const { data } = await supabase
-      .from('MiejscaPostojowe')
-      .insert({ position_x: canvasX, position_y: canvasY, zajęte: false })
-      .select()
-      .single()
-    if (data) setBerths((b) => [...b, data as Miejsce])
+    setDialogPos({ x: canvasX, y: canvasY })
   }
 
-  // 5) Touch handlers
+  // 6) Desktop click
+  const handleClick = (e: any) => {
+    const { clientX, clientY } = e.evt as MouseEvent
+    openDialogAt(clientX, clientY)
+  }
+
+  // 7) Touch handlers
   const onTouchStart: React.TouchEventHandler = (e) => {
     for (const t of Array.from(e.changedTouches)) {
       pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
@@ -117,8 +112,8 @@ export default function MarinaCanvas() {
 
   const onTouchMove: React.TouchEventHandler = (e) => {
     const ids = Object.keys(pointers.current)
-    // PINCH
     if (ids.length === 2) {
+      // pinch logic (unchanged) …
       hasPinched.current = true
       e.preventDefault()
       for (const t of Array.from(e.touches)) {
@@ -134,42 +129,32 @@ export default function MarinaCanvas() {
       }
       const ratio = dist / lastDist.current
       const newScale = Math.max(initialScale, scale * ratio)
-
-      // recenter on midpoint
       const cx = (p1.x + p2.x) / 2
       const cy = (p1.y + p2.y) / 2
       const newX = cx - (cx - pos.x) * (newScale / scale)
       const newY = cy - (cy - pos.y) * (newScale / scale)
-
-      const clamped = clampPos(newX, newY)
       setScale(newScale)
-      setPos(clamped)
+      setPos(clampPos(newX, newY))
       lastDist.current = dist
       return
     }
-
-    // PAN (one finger)
     if (ids.length === 1) {
+      // pan logic (unchanged) …
       const id = +ids[0]
       const prev = pointers.current[id]
       const t = Array.from(e.touches).find((x) => x.identifier === id)
       if (!t || !prev) return
-
       const dx = t.clientX - prev.x
       const dy = t.clientY - prev.y
       if (Math.hypot(dx, dy) > TAP_THRESHOLD) {
         hasPanned.current = true
       }
-      const unclampedX = pos.x + dx
-      const unclampedY = pos.y + dy
-      setPos(clampPos(unclampedX, unclampedY))
-
+      setPos(clampPos(pos.x + dx, pos.y + dy))
       pointers.current[id] = { x: t.clientX, y: t.clientY }
     }
   }
 
-  const onTouchEnd: React.TouchEventHandler = async (e) => {
-    // TAP?
+  const onTouchEnd: React.TouchEventHandler = (e) => {
     if (
       !hasPinched.current &&
       !hasPanned.current &&
@@ -181,87 +166,137 @@ export default function MarinaCanvas() {
       const dx = t.clientX - tapStart.current.x
       const dy = t.clientY - tapStart.current.y
       if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
-        // raw touch → canvas coords
-        const canvasX = (t.clientX - pos.x) / scale
-        const canvasY = (t.clientY - pos.y) / scale
-
-        if (
-          window.confirm(
-            `Add berth at x:${Math.round(canvasX)} y:${Math.round(canvasY)}?`
-          )
-        ) {
-          const { data } = await supabase
-            .from('MiejscaPostojowe')
-            .insert({
-              position_x: canvasX,
-              position_y: canvasY,
-              zajęte: false,
-            })
-            .select()
-            .single()
-          if (data) setBerths((b) => [...b, data as Miejsce])
-        }
+        openDialogAt(t.clientX, t.clientY)
       }
     }
-
     // cleanup
     for (const t of Array.from(e.changedTouches)) {
       delete pointers.current[t.identifier]
     }
-    if (Object.keys(pointers.current).length < 2) {
-      lastDist.current = 0
-    }
+    if (Object.keys(pointers.current).length < 2) lastDist.current = 0
     tapStart.current = null
   }
 
-  // 6) Render
+  // inside handleDialogSave in MarinaCanvas.tsx
+
+  const handleDialogSave = async (
+    pos2: { x: number; y: number },
+    values: DodajMiejscePostojoweValues
+  ) => {
+    // 1) Najemca
+    const { data: tenant, error: tenantError } = await supabase
+      .from('Najemcy')
+      .insert({
+        imię: values.tenant, // <— column is "imię"
+        telefon: values.phone, // <— column is "telefon"
+      })
+      .select()
+      .single()
+
+    if (tenantError || !tenant) {
+      console.error('Failed to insert Najemca:', tenantError)
+      alert('Nie udało się zapisać najemcy. Sprawdź konsolę.')
+      return
+    }
+
+    // 2) Umowa
+    const { data: contract, error: contractError } = await supabase
+      .from('Umowy')
+      .insert({
+        najemca_id: tenant.id,
+        data_od: values.start, // <— column is "data_od"
+        data_do: values.end, // <— column is "data_do"
+        kwota: values.amount, // <— column is "kwota"
+      })
+      .select()
+      .single()
+
+    if (contractError || !contract) {
+      console.error('Failed to insert Umowa:', contractError)
+      alert('Nie udało się zapisać umowy.')
+      return
+    }
+
+    // 3) Berth
+    const { data: berth, error: berthError } = await supabase
+      .from('MiejscaPostojowe')
+      .insert({
+        position_x: pos2.x,
+        position_y: pos2.y,
+        zajęte: true,
+        najemca_id: tenant.id, // link back to the tenant
+        uwagi: '', // optional
+      })
+      .select()
+      .single()
+
+    if (berthError || !berth) {
+      console.error('Failed to insert MiejscePostojowe:', berthError)
+      alert('Nie udało się zapisać miejsca.')
+      return
+    }
+
+    setBerths((b) => [...b, berth as Miejsce])
+    setDialogPos(null)
+  }
+
+  // 9) Render
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
-        touchAction: 'none',
-        userSelect: 'none',
-      }}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
-      <Stage
-        ref={stageRef}
-        width={dims.w}
-        height={dims.h}
-        x={pos.x}
-        y={pos.y}
-        scaleX={scale}
-        scaleY={scale}
-        onClick={handleClick}
-        style={{ background: '#fafafa' }}
+    <>
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          touchAction: 'none',
+          userSelect: 'none',
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
-        <Layer>
-          {background && (
-            <KonvaImage
-              image={background}
-              x={0}
-              y={0}
-              width={background.width}
-              height={background.height}
-            />
-          )}
-          {berths.map((b) => (
-            <Circle
-              key={b.id}
-              x={b.position_x}
-              y={b.position_y}
-              radius={10}
-              fill={b.zajęte ? 'blue' : 'green'}
-              stroke="white"
-              strokeWidth={2}
-            />
-          ))}
-        </Layer>
-      </Stage>
-    </div>
+        <Stage
+          ref={stageRef}
+          width={dims.w}
+          height={dims.h}
+          x={pos.x}
+          y={pos.y}
+          scaleX={scale}
+          scaleY={scale}
+          onClick={handleClick}
+          style={{ background: '#fafafa' }}
+        >
+          <Layer>
+            {background && (
+              <KonvaImage
+                image={background}
+                x={0}
+                y={0}
+                width={background.width}
+                height={background.height}
+              />
+            )}
+            {berths.map((b) => (
+              <Circle
+                key={b.id}
+                x={b.position_x}
+                y={b.position_y}
+                radius={10}
+                fill={b.zajęte ? 'blue' : 'green'}
+                stroke="white"
+                strokeWidth={2}
+              />
+            ))}
+          </Layer>
+        </Stage>
+      </div>
+
+      <DodajMiejscePostojoweDialog
+        open={!!dialogPos}
+        initialPos={dialogPos}
+        onCancel={() => setDialogPos(null)}
+        onSave={handleDialogSave}
+      />
+    </>
   )
 }
