@@ -96,13 +96,16 @@ export function DodajMiejscePostojoweDialog({
 
           <label className="block">
             <span className="label-text">Kwota</span>
-            <input
-              type="number"
-              placeholder="Kwota"
-              className="input input-bordered w-full"
-              value={amount}
-              onChange={(e) => setAmount(e.currentTarget.value)}
-            />
+            <div className="input-group mt-1 w-full">
+              <input
+                type="number"
+                placeholder="Kwota"
+                className="input input-bordered flex-1"
+                value={amount}
+                onChange={(e) => setAmount(e.currentTarget.value)}
+              />
+              <span className="px-4 bg-base-200">PLN</span>
+            </div>
           </label>
 
           <label className="block">
