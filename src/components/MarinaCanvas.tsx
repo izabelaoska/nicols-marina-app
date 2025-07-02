@@ -15,10 +15,10 @@ type Miejsce = {
 }
 
 export default function MarinaCanvas() {
-  // 1) Background + existing berths
   const [background] = useImage('/marina-layout.png')
-  const [berths, setBerths] = useState<Miejsce[]>([])
   const boatIcon = useBoatIcon()
+  const [berths, setBerths] = useState<Miejsce[]>([])
+
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
@@ -26,7 +26,6 @@ export default function MarinaCanvas() {
       .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
-  // 2) Fit + pan/zoom
   const [dims, setDims] = useState({
     w: window.innerWidth,
     h: window.innerHeight,
@@ -59,48 +58,29 @@ export default function MarinaCanvas() {
     }
   }, [fitToScreen])
 
-  // 3) Touch/pinch/pan refs & helpers (unchanged) …
-  const stageRef = useRef<any>(null)
-  const pointers = useRef<Record<number, { x: number; y: number }>>({})
-  const lastDist = useRef(0)
-  const hasPinched = useRef(false)
-  const hasPanned = useRef(false)
-  const tapStart = useRef<{ x: number; y: number } | null>(null)
-  const TAP_THRESHOLD = 6
-
-  function clampPos(x: number, y: number) {
+  const clampPos = (x: number, y: number) => {
     if (!background) return { x, y }
-    const wScaled = background.width * scale
-    const hScaled = background.height * scale
-    const minX = Math.min(0, dims.w - wScaled)
-    const maxX = 0
-    const minY = Math.min(0, dims.h - hScaled)
-    const maxY = 0
+    const wS = background.width * scale,
+      hS = background.height * scale
+    const minX = Math.min(0, dims.w - wS),
+      maxX = 0
+    const minY = Math.min(0, dims.h - hS),
+      maxY = 0
     return {
       x: Math.max(minX, Math.min(x, maxX)),
       y: Math.max(minY, Math.min(y, maxY)),
     }
   }
 
-  // 4) Dialog state
-  const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
-    null
-  )
+  const stageRef = useRef<Konva.Stage>(null)
+  const pointers = useRef<Record<number, { x: number; y: number }>>({})
+  const lastDist = useRef(0)
+  const hasPinched = useRef(false)
+  const hasPanned = useRef(false)
+  const tapStart = useRef<{ x: number; y: number } | null>(null)
+  const isDraggingIcon = useRef(false)
+  const TAP_THRESHOLD = 6
 
-  // 5) Common fn to open dialog at canvas coords
-  const openDialogAt = (clientX: number, clientY: number) => {
-    const canvasX = (clientX - pos.x) / scale
-    const canvasY = (clientY - pos.y) / scale
-    setDialogPos({ x: canvasX, y: canvasY })
-  }
-
-  // 6) Desktop click
-  const handleClick = (e: any) => {
-    const { clientX, clientY } = e.evt as MouseEvent
-    openDialogAt(clientX, clientY)
-  }
-
-  // 7) Touch handlers
   const onTouchStart: React.TouchEventHandler = (e) => {
     for (const t of Array.from(e.changedTouches)) {
       pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
@@ -114,9 +94,9 @@ export default function MarinaCanvas() {
   }
 
   const onTouchMove: React.TouchEventHandler = (e) => {
+    if (isDraggingIcon.current) return
     const ids = Object.keys(pointers.current)
     if (ids.length === 2) {
-      // pinch logic (unchanged) …
       hasPinched.current = true
       e.preventDefault()
       for (const t of Array.from(e.touches)) {
@@ -132,26 +112,26 @@ export default function MarinaCanvas() {
       }
       const ratio = dist / lastDist.current
       const newScale = Math.max(initialScale, scale * ratio)
-      const cx = (p1.x + p2.x) / 2
-      const cy = (p1.y + p2.y) / 2
-      const newX = cx - (cx - pos.x) * (newScale / scale)
-      const newY = cy - (cy - pos.y) * (newScale / scale)
+      const cx = (p1.x + p2.x) / 2,
+        cy = (p1.y + p2.y) / 2
       setScale(newScale)
-      setPos(clampPos(newX, newY))
+      setPos(
+        clampPos(
+          cx - (cx - pos.x) * (newScale / scale),
+          cy - (cy - pos.y) * (newScale / scale)
+        )
+      )
       lastDist.current = dist
       return
     }
     if (ids.length === 1) {
-      // pan logic (unchanged) …
       const id = +ids[0]
       const prev = pointers.current[id]
       const t = Array.from(e.touches).find((x) => x.identifier === id)
       if (!t || !prev) return
-      const dx = t.clientX - prev.x
-      const dy = t.clientY - prev.y
-      if (Math.hypot(dx, dy) > TAP_THRESHOLD) {
-        hasPanned.current = true
-      }
+      const dx = t.clientX - prev.x,
+        dy = t.clientY - prev.y
+      if (Math.hypot(dx, dy) > TAP_THRESHOLD) hasPanned.current = true
       setPos(clampPos(pos.x + dx, pos.y + dy))
       pointers.current[id] = { x: t.clientX, y: t.clientY }
     }
@@ -166,13 +146,12 @@ export default function MarinaCanvas() {
       e.changedTouches.length === 1
     ) {
       const t = e.changedTouches[0]
-      const dx = t.clientX - tapStart.current.x
-      const dy = t.clientY - tapStart.current.y
+      const dx = t.clientX - tapStart.current.x,
+        dy = t.clientY - tapStart.current.y
       if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
         openDialogAt(t.clientX, t.clientY)
       }
     }
-    // cleanup
     for (const t of Array.from(e.changedTouches)) {
       delete pointers.current[t.identifier]
     }
@@ -180,48 +159,56 @@ export default function MarinaCanvas() {
     tapStart.current = null
   }
 
-  // inside handleDialogSave in MarinaCanvas.tsx
+  const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
+    null
+  )
+  const openDialogAt = (cx: number, cy: number) => {
+    setDialogPos({ x: (cx - pos.x) / scale, y: (cy - pos.y) / scale })
+  }
+
+  const handleClick = (e: any) => {
+    const { clientX, clientY } = e.evt as MouseEvent
+    openDialogAt(clientX, clientY)
+  }
+
+  const handleBoatDragEnd = useCallback(async (id: string, e: any) => {
+    isDraggingIcon.current = false
+    const newX = e.target.x(),
+      newY = e.target.y()
+    setBerths((all) =>
+      all.map((m) =>
+        m.id === id ? { ...m, position_x: newX, position_y: newY } : m
+      )
+    )
+    const { error } = await supabase
+      .from('MiejscaPostojowe')
+      .update({ position_x: newX, position_y: newY })
+      .eq('id', id)
+    if (error) console.error('Failed to update position:', error)
+  }, [])
 
   const handleDialogSave = async (
     pos2: { x: number; y: number },
     values: DodajMiejscePostojoweValues
   ) => {
-    // 1) Najemca
-    const { data: tenant, error: tenantError } = await supabase
+    const { data: tenant } = await supabase
       .from('Najemcy')
-      .insert({
-        imię: values.tenant, // <— column is "imię"
-        telefon: values.phone, // <— column is "telefon"
-      })
+      .insert({ imię: values.tenant, telefon: values.phone })
       .select()
       .single()
-
-    if (tenantError || !tenant) {
-      console.error('Failed to insert Najemca:', tenantError)
-      alert('Nie udało się zapisać najemcy. Sprawdź konsolę.')
-      return
-    }
-
-    // 2) Umowa
-    const { data: contract, error: contractError } = await supabase
+    if (!tenant) return
+    const { data: contract } = await supabase
       .from('Umowy')
       .insert({
         najemca_id: tenant.id,
-        data_od: values.start, // <— column is "data_od"
-        data_do: values.end, // <— column is "data_do"
-        kwota: values.amount, // <— column is "kwota"
+        data_od: values.start,
+        data_do: values.end,
+        kwota: values.amount,
       })
       .select()
       .single()
-
-    if (contractError || !contract) {
-      console.error('Failed to insert Umowa:', contractError)
-      alert('Nie udało się zapisać umowy.')
-      return
-    }
-
-    // 3) Berth
-    const { data: berth, error: berthError } = await supabase
+    if (!contract) return
+    const { data: berth } = await supabase
       .from('MiejscaPostojowe')
       .insert({
         position_x: pos2.x,
@@ -232,18 +219,10 @@ export default function MarinaCanvas() {
       })
       .select()
       .single()
-
-    if (berthError || !berth) {
-      console.error('Failed to insert MiejscePostojowe:', berthError)
-      alert('Nie udało się zapisać miejsca.')
-      return
-    }
-
-    setBerths((b) => [...b, berth as Miejsce])
+    if (berth) setBerths((b) => [...b, berth])
     setDialogPos(null)
   }
 
-  // 9) Render
   return (
     <>
       <div
@@ -279,46 +258,32 @@ export default function MarinaCanvas() {
                 height={background.height}
               />
             )}
-            {berths.map((b) => {
-              const ICON_SIZE = 20
-              return (
-                <KonvaImage
-                  key={b.id}
-                  image={boatIcon}
-                  x={b.position_x}
-                  y={b.position_y}
-                  width={ICON_SIZE}
-                  height={ICON_SIZE}
-                  offsetX={ICON_SIZE / 2}
-                  offsetY={ICON_SIZE / 2}
-                  draggable
-                  // apply the RGBA filter
-                  filters={[Konva.Filters.RGBA]}
-                  // set all channels to 255 → pure white
-                  red={255}
-                  green={255}
-                  blue={255}
-                  // keep full opacity
-                  alpha={1}
-                  onDragEnd={async (e) => {
-                    const newX = e.target.x()
-                    const newY = e.target.y()
-                    setBerths((all) =>
-                      all.map((m) =>
-                        m.id === b.id
-                          ? { ...m, position_x: newX, position_y: newY }
-                          : m
-                      )
-                    )
-                    const { error } = await supabase
-                      .from('MiejscaPostojowe')
-                      .update({ position_x: newX, position_y: newY })
-                      .eq('id', b.id)
-                    if (error) console.error('Update failed', error)
-                  }}
-                />
-              )
-            })}
+            {boatIcon &&
+              berths.map((b) => {
+                const ICON_SIZE = 20
+                return (
+                  <KonvaImage
+                    key={b.id}
+                    image={boatIcon}
+                    x={b.position_x}
+                    y={b.position_y}
+                    width={ICON_SIZE}
+                    height={ICON_SIZE}
+                    offsetX={ICON_SIZE / 2}
+                    offsetY={ICON_SIZE / 2}
+                    draggable
+                    onDragStart={() => {
+                      isDraggingIcon.current = true
+                    }}
+                    onDragEnd={(e) => handleBoatDragEnd(b.id, e)}
+                    filters={[Konva.Filters.RGBA]}
+                    red={255}
+                    green={255}
+                    blue={255}
+                    alpha={1}
+                  />
+                )
+              })}
           </Layer>
         </Stage>
       </div>
