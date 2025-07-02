@@ -57,7 +57,7 @@ export function DodajMiejscePostojoweDialog({
 
   return (
     <div className={`modal ${open ? 'modal-open' : ''}`}>
-      <div className="w-full h-full flex items-center justify-center">
+      <div className="p-2 w-full h-full flex items-center justify-center">
         <div className="modal-box w-full sm:w-96 max-h-[90vh] overflow-y-auto p-6">
           <h3 className="font-bold text-lg">Dodaj dane</h3>
 
@@ -97,7 +97,7 @@ export function DodajMiejscePostojoweDialog({
             </div>
 
             <label className="block relative">
-              <span className="label-text">Kwota</span>
+              <span className="label-text">Kwota (PLN)</span>
               <input
                 type="number"
                 placeholder="Kwota"
@@ -105,9 +105,6 @@ export function DodajMiejscePostojoweDialog({
                 value={amount}
                 onChange={(e) => setAmount(e.currentTarget.value)}
               />
-              <span className="absolute right-0 pr-3 inset-y-0 flex items-center pointer-events-none text-gray-500">
-                PLN
-              </span>
             </label>
 
             <label className="block">
