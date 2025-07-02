@@ -224,8 +224,8 @@ export default function MarinaCanvas() {
         position_x: pos2.x,
         position_y: pos2.y,
         zajęte: true,
-        najemca_id: tenant.id, // link back to the tenant
-        uwagi: '', // optional
+        najemca_id: tenant.id,
+        uwagi: values.uwagi ?? '',
       })
       .select()
       .single()
