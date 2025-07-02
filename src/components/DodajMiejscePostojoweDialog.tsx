@@ -73,7 +73,7 @@ export function DodajMiejscePostojoweDialog({
               />
             </label>
 
-            <div className="flex flex-col sm:flex-row sm:gap-2 space-y-4 sm:space-y-0">
+            <div className="flex flex-col sm:gap-2 space-y-4 sm:space-y-0">
               <label className="flex-1">
                 <span className="label-text">
                   Data rozpoczęcia (opcjonalnie)
