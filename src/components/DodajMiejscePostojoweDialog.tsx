@@ -33,8 +33,8 @@ export function DodajMiejscePostojoweDialog({
   useEffect(() => {
     if (open) {
       setTenant('')
-      setStart('') // leave blank by default
-      setEnd('') // leave blank by default
+      setStart('')
+      setEnd('')
       setAmount('')
       setPhone('')
       setRemarks('')
@@ -53,18 +53,15 @@ export function DodajMiejscePostojoweDialog({
     })
   }
 
-  // Only require tenant, amount and phone
   const canSave = !!(tenant.trim() && amount.trim())
 
   return (
     <div className={`modal ${open ? 'modal-open' : ''}`}>
-      {/* outer padding so modal doesn’t stick right to the edges */}
-      <div className="p-2 w-full h-full flex items-center justify-center">
+      <div className="p-4 w-full h-full flex items-center justify-center">
         <div className="modal-box w-full sm:w-96 max-h-[90vh] overflow-y-auto">
           <h3 className="font-bold text-lg">Dodaj dane</h3>
 
           <div className="mt-4 space-y-4">
-            {/* Najemca */}
             <label className="block">
               <span className="label-text">Najemca</span>
               <input
@@ -76,8 +73,7 @@ export function DodajMiejscePostojoweDialog({
               />
             </label>
 
-            {/* Daty – now optional */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:gap-2 space-y-4 sm:space-y-0">
               <label className="flex-1">
                 <span className="label-text">
                   Data rozpoczęcia (opcjonalnie)
@@ -100,7 +96,6 @@ export function DodajMiejscePostojoweDialog({
               </label>
             </div>
 
-            {/* Kwota with inline PLN badge */}
             <label className="block relative">
               <span className="label-text">Kwota</span>
               <input
@@ -110,12 +105,11 @@ export function DodajMiejscePostojoweDialog({
                 value={amount}
                 onChange={(e) => setAmount(e.currentTarget.value)}
               />
-              <span className="absolute top-0 right-0 h-full flex items-center pr-3 pointer-events-none text-gray-500">
+              <span className="absolute top-1/2 right-0 -translate-y-1/2 pr-3 pointer-events-none text-gray-500">
                 PLN
               </span>
             </label>
 
-            {/* Telefon */}
             <label className="block">
               <span className="label-text">Telefon (opcjonalnie)</span>
               <input
@@ -127,7 +121,6 @@ export function DodajMiejscePostojoweDialog({
               />
             </label>
 
-            {/* Uwagi */}
             <label className="block">
               <span className="label-text">Uwagi (opcjonalnie)</span>
               <textarea
