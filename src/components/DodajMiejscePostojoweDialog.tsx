@@ -57,8 +57,8 @@ export function DodajMiejscePostojoweDialog({
 
   return (
     <div className={`modal ${open ? 'modal-open' : ''}`}>
-      <div className="p-4 w-full h-full flex items-center justify-center">
-        <div className="modal-box w-full sm:w-96 max-h-[90vh] overflow-y-auto">
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="modal-box w-full sm:w-96 max-h-[90vh] overflow-y-auto p-6">
           <h3 className="font-bold text-lg">Dodaj dane</h3>
 
           <div className="mt-4 space-y-4">
@@ -105,7 +105,7 @@ export function DodajMiejscePostojoweDialog({
                 value={amount}
                 onChange={(e) => setAmount(e.currentTarget.value)}
               />
-              <span className="absolute top-1/2 right-0 -translate-y-1/2 pr-3 pointer-events-none text-gray-500">
+              <span className="absolute right-0 pr-3 inset-y-0 flex items-center pointer-events-none text-gray-500">
                 PLN
               </span>
             </label>
