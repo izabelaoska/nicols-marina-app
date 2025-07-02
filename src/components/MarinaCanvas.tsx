@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
-import { Stage, Layer, Circle, Image as KonvaImage } from 'react-konva'
+import { Stage, Layer, Image as KonvaImage } from 'react-konva'
+import Konva from 'konva'
 import useImage from 'use-image'
 import { supabase } from '../lib/supabaseClient'
 import type { DodajMiejscePostojoweValues } from '../components/DodajMiejscePostojoweDialog'
 import { DodajMiejscePostojoweDialog } from '../components/DodajMiejscePostojoweDialog'
+import useBoatIcon from '../hooks/useBoatIcon'
 
 type Miejsce = {
   id: string
@@ -16,6 +18,7 @@ export default function MarinaCanvas() {
   // 1) Background + existing berths
   const [background] = useImage('/marina-layout.png')
   const [berths, setBerths] = useState<Miejsce[]>([])
+  const boatIcon = useBoatIcon()
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
@@ -276,17 +279,46 @@ export default function MarinaCanvas() {
                 height={background.height}
               />
             )}
-            {berths.map((b) => (
-              <Circle
-                key={b.id}
-                x={b.position_x}
-                y={b.position_y}
-                radius={10}
-                fill={b.zajęte ? 'blue' : 'green'}
-                stroke="white"
-                strokeWidth={2}
-              />
-            ))}
+            {berths.map((b) => {
+              const ICON_SIZE = 20
+              return (
+                <KonvaImage
+                  key={b.id}
+                  image={boatIcon}
+                  x={b.position_x}
+                  y={b.position_y}
+                  width={ICON_SIZE}
+                  height={ICON_SIZE}
+                  offsetX={ICON_SIZE / 2}
+                  offsetY={ICON_SIZE / 2}
+                  draggable
+                  // apply the RGBA filter
+                  filters={[Konva.Filters.RGBA]}
+                  // set all channels to 255 → pure white
+                  red={255}
+                  green={255}
+                  blue={255}
+                  // keep full opacity
+                  alpha={1}
+                  onDragEnd={async (e) => {
+                    const newX = e.target.x()
+                    const newY = e.target.y()
+                    setBerths((all) =>
+                      all.map((m) =>
+                        m.id === b.id
+                          ? { ...m, position_x: newX, position_y: newY }
+                          : m
+                      )
+                    )
+                    const { error } = await supabase
+                      .from('MiejscaPostojowe')
+                      .update({ position_x: newX, position_y: newY })
+                      .eq('id', b.id)
+                    if (error) console.error('Update failed', error)
+                  }}
+                />
+              )
+            })}
           </Layer>
         </Stage>
       </div>
