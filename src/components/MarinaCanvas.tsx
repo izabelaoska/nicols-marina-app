@@ -188,10 +188,8 @@ export default function MarinaCanvas() {
     openDialogAt(clientX, clientY)
   }
 
-  // info dialog state
-
   const handleDelete = async (id: string) => {
-    // Step 1: Fetch najemca_id
+    // Step 1: Fetch najemca_id for the berth
     const { data: berthData, error: fetchError } = await supabase
       .from('MiejscaPostojowe')
       .select('najemca_id')
@@ -205,49 +203,26 @@ export default function MarinaCanvas() {
 
     const najemcaId = berthData.najemca_id
 
-    // Step 2: Delete Umowa only for this miejsce + najemca
-    const { error: contractDeleteError } = await supabase
-      .from('Umowy')
-      .delete()
-      .eq('najemca_id', najemcaId)
-      .eq('miejsce_id', id)
+    // Step 2: Delete all three in parallel
+    const [
+      { error: contractError },
+      { error: tenantError },
+      { error: berthError },
+    ] = await Promise.all([
+      supabase.from('Umowy').delete().eq('najemca_id', najemcaId),
+      supabase.from('Najemcy').delete().eq('id', najemcaId),
+      supabase.from('MiejscaPostojowe').delete().eq('id', id),
+    ])
 
-    if (contractDeleteError) {
-      console.error('Failed to delete contract:', contractDeleteError)
+    if (contractError || tenantError || berthError) {
+      console.error('Delete failed:', {
+        contractError,
+        tenantError,
+        berthError,
+      })
       return
     }
 
-    // Step 3: Delete MiejscePostojowe (the berth)
-    const { error: berthDeleteError } = await supabase
-      .from('MiejscaPostojowe')
-      .delete()
-      .eq('id', id)
-
-    if (berthDeleteError) {
-      console.error('Failed to delete berth:', berthDeleteError)
-      return
-    }
-
-    // Step 4: Check if the same najemca_id is used elsewhere
-    const { data: otherBerths } = await supabase
-      .from('MiejscaPostojowe')
-      .select('id')
-      .eq('najemca_id', najemcaId)
-
-    if (otherBerths && otherBerths.length === 0) {
-      // Step 5: If not used elsewhere, delete the Najemca
-      const { error: tenantDeleteError } = await supabase
-        .from('Najemcy')
-        .delete()
-        .eq('id', najemcaId)
-
-      if (tenantDeleteError) {
-        console.error('Failed to delete tenant:', tenantDeleteError)
-        return
-      }
-    }
-
-    // Step 6: Update local state
     setBerths((all) => all.filter((b) => b.id !== id))
     setInfoBerth(null)
   }
