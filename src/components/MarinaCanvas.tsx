@@ -189,44 +189,19 @@ export default function MarinaCanvas() {
   }
 
   const handleDelete = async (id: string) => {
-    // Step 1: Fetch najemca_id for the berth
-    const { data: berthData, error: fetchError } = await supabase
+    const { error } = await supabase
       .from('MiejscaPostojowe')
-      .select('najemca_id')
+      .delete()
       .eq('id', id)
-      .single()
 
-    if (fetchError || !berthData?.najemca_id) {
-      console.error('Could not fetch najemca_id:', fetchError)
-      return
-    }
-
-    const najemcaId = berthData.najemca_id
-
-    // Step 2: Delete all three in parallel
-    const [
-      { error: contractError },
-      { error: tenantError },
-      { error: berthError },
-    ] = await Promise.all([
-      supabase.from('Umowy').delete().eq('najemca_id', najemcaId),
-      supabase.from('Najemcy').delete().eq('id', najemcaId),
-      supabase.from('MiejscaPostojowe').delete().eq('id', id),
-    ])
-
-    if (contractError || tenantError || berthError) {
-      console.error('Delete failed:', {
-        contractError,
-        tenantError,
-        berthError,
-      })
+    if (error) {
+      console.error('Delete failed:', error)
       return
     }
 
     setBerths((all) => all.filter((b) => b.id !== id))
     setInfoBerth(null)
   }
-
   // drag boat
   const handleBoatDragEnd = useCallback(async (id: string, e: any) => {
     isDraggingIcon.current = false
