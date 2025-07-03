@@ -1,10 +1,11 @@
+// src/components/MarinaCanvas.tsx
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { Stage, Layer, Image as KonvaImage } from 'react-konva'
 import Konva from 'konva'
 import useImage from 'use-image'
 import { supabase } from '../lib/supabaseClient'
-import type { DodajMiejscePostojoweValues } from '../components/DodajMiejscePostojoweDialog'
-import { DodajMiejscePostojoweDialog } from '../components/DodajMiejscePostojoweDialog'
+import type { DodajMiejscePostojoweValues } from './DodajMiejscePostojoweDialog'
+import { DodajMiejscePostojoweDialog } from './DodajMiejscePostojoweDialog'
 import useBoatIcon from '../hooks/useBoatIcon'
 
 type Miejsce = {
@@ -15,10 +16,14 @@ type Miejsce = {
 }
 
 export default function MarinaCanvas() {
+  // background
   const [background] = useImage('/marina-layout.png')
-  const boatIcon = useBoatIcon()
+  // SVG→Image hook
+  const boatIcon = useBoatIcon(24, 'white')
+  // fetched berths
   const [berths, setBerths] = useState<Miejsce[]>([])
 
+  // fetch on mount
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
@@ -26,6 +31,7 @@ export default function MarinaCanvas() {
       .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
+  // fit + pan/zoom state
   const [dims, setDims] = useState({
     w: window.innerWidth,
     h: window.innerHeight,
@@ -34,17 +40,18 @@ export default function MarinaCanvas() {
   const [scale, setScale] = useState(1)
   const [pos, setPos] = useState({ x: 0, y: 0 })
 
+  // recalc on resize/orientation
   const fitToScreen = useCallback(() => {
     const vw = window.innerWidth,
       vh = window.innerHeight
     setDims({ w: vw, h: vh })
     if (!background) return
-    const fit = Math.max(vw / background.width, vh / background.height)
-    setInitialScale(fit)
-    setScale(fit)
+    const factor = Math.max(vw / background.width, vh / background.height)
+    setInitialScale(factor)
+    setScale(factor)
     setPos({
-      x: (vw - background.width * fit) / 2,
-      y: (vh - background.height * fit) / 2,
+      x: (vw - background.width * factor) / 2,
+      y: (vh - background.height * factor) / 2,
     })
   }, [background])
 
@@ -58,10 +65,11 @@ export default function MarinaCanvas() {
     }
   }, [fitToScreen])
 
+  // clamp pan
   const clampPos = (x: number, y: number) => {
     if (!background) return { x, y }
-    const wS = background.width * scale,
-      hS = background.height * scale
+    const wS = background.width * scale
+    const hS = background.height * scale
     const minX = Math.min(0, dims.w - wS),
       maxX = 0
     const minY = Math.min(0, dims.h - hS),
@@ -72,6 +80,7 @@ export default function MarinaCanvas() {
     }
   }
 
+  // refs for Konva and multi-touch
   const stageRef = useRef<Konva.Stage>(null)
   const pointers = useRef<Record<number, { x: number; y: number }>>({})
   const lastDist = useRef(0)
@@ -81,6 +90,7 @@ export default function MarinaCanvas() {
   const isDraggingIcon = useRef(false)
   const TAP_THRESHOLD = 6
 
+  // touch start for pan/pinch
   const onTouchStart: React.TouchEventHandler = (e) => {
     for (const t of Array.from(e.changedTouches)) {
       pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
@@ -93,16 +103,17 @@ export default function MarinaCanvas() {
     }
   }
 
+  // touch move: pinch or pan, unless dragging icon
   const onTouchMove: React.TouchEventHandler = (e) => {
     if (isDraggingIcon.current) return
     const ids = Object.keys(pointers.current)
     if (ids.length === 2) {
+      // pinch zoom
       hasPinched.current = true
       e.preventDefault()
       for (const t of Array.from(e.touches)) {
-        if (pointers.current[t.identifier]) {
+        if (pointers.current[t.identifier])
           pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
-        }
       }
       const [p1, p2] = ids.map((id) => pointers.current[+id])
       const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y)
@@ -125,6 +136,7 @@ export default function MarinaCanvas() {
       return
     }
     if (ids.length === 1) {
+      // pan
       const id = +ids[0]
       const prev = pointers.current[id]
       const t = Array.from(e.touches).find((x) => x.identifier === id)
@@ -137,6 +149,7 @@ export default function MarinaCanvas() {
     }
   }
 
+  // touch end cleanup or tap to open dialog
   const onTouchEnd: React.TouchEventHandler = (e) => {
     if (
       !hasPinched.current &&
@@ -146,31 +159,30 @@ export default function MarinaCanvas() {
       e.changedTouches.length === 1
     ) {
       const t = e.changedTouches[0]
-      const dx = t.clientX - tapStart.current.x,
-        dy = t.clientY - tapStart.current.y
-      if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
-        openDialogAt(t.clientX, t.clientY)
-      }
+      const dx = t.clientX - tapStart.current.x
+      const dy = t.clientY - tapStart.current.y
+      if (Math.hypot(dx, dy) < TAP_THRESHOLD) openDialogAt(t.clientX, t.clientY)
     }
-    for (const t of Array.from(e.changedTouches)) {
+    for (const t of Array.from(e.changedTouches))
       delete pointers.current[t.identifier]
-    }
     if (Object.keys(pointers.current).length < 2) lastDist.current = 0
     tapStart.current = null
   }
 
+  // dialog (add berth) state
   const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
     null
   )
-  const openDialogAt = (cx: number, cy: number) => {
+  const openDialogAt = (cx: number, cy: number) =>
     setDialogPos({ x: (cx - pos.x) / scale, y: (cy - pos.y) / scale })
-  }
 
+  // desktop click → open dialog
   const handleClick = (e: any) => {
     const { clientX, clientY } = e.evt as MouseEvent
     openDialogAt(clientX, clientY)
   }
 
+  // drag-end on boat → persist & update UI
   const handleBoatDragEnd = useCallback(async (id: string, e: any) => {
     isDraggingIcon.current = false
     const newX = e.target.x(),
@@ -184,9 +196,10 @@ export default function MarinaCanvas() {
       .from('MiejscaPostojowe')
       .update({ position_x: newX, position_y: newY })
       .eq('id', id)
-    if (error) console.error('Failed to update position:', error)
+    if (error) console.error('Update failed', error)
   }, [])
 
+  // handleSave from dialog (inserts tenant/contract/berth)
   const handleDialogSave = async (
     pos2: { x: number; y: number },
     values: DodajMiejscePostojoweValues
@@ -246,7 +259,6 @@ export default function MarinaCanvas() {
           scaleX={scale}
           scaleY={scale}
           onClick={handleClick}
-          style={{ background: '#fafafa' }}
         >
           <Layer>
             {background && (
@@ -260,27 +272,22 @@ export default function MarinaCanvas() {
             )}
             {boatIcon &&
               berths.map((b) => {
-                const ICON_SIZE = 20
+                const S = 20
                 return (
                   <KonvaImage
                     key={b.id}
                     image={boatIcon}
                     x={b.position_x}
                     y={b.position_y}
-                    width={ICON_SIZE}
-                    height={ICON_SIZE}
-                    offsetX={ICON_SIZE / 2}
-                    offsetY={ICON_SIZE / 2}
+                    width={S}
+                    height={S}
+                    offsetX={S / 2}
+                    offsetY={S / 2}
                     draggable
                     onDragStart={() => {
                       isDraggingIcon.current = true
                     }}
                     onDragEnd={(e) => handleBoatDragEnd(b.id, e)}
-                    filters={[Konva.Filters.RGBA]}
-                    red={255}
-                    green={255}
-                    blue={255}
-                    alpha={1}
                   />
                 )
               })}
