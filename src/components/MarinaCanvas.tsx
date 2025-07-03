@@ -190,12 +190,55 @@ export default function MarinaCanvas() {
   // info dialog state
   const [infoBerth, setInfoBerth] = useState<Miejsce | null>(null)
   const handleDelete = async (id: string) => {
-    setBerths((all) => all.filter((b) => b.id !== id))
-    const { error } = await supabase
+    // Step 1: Get the najemca_id before deletion
+    const { data: berthData, error: fetchError } = await supabase
+      .from('MiejscaPostojowe')
+      .select('najemca_id')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !berthData?.najemca_id) {
+      console.error('Could not fetch najemca_id:', fetchError)
+      return
+    }
+
+    const najemcaId = berthData.najemca_id
+
+    // Step 2: Delete Umowy for that najemca
+    const { error: contractDeleteError } = await supabase
+      .from('Umowy')
+      .delete()
+      .eq('najemca_id', najemcaId)
+
+    if (contractDeleteError) {
+      console.error('Failed to delete contract:', contractDeleteError)
+      return
+    }
+
+    // Step 3: Delete Najemca
+    const { error: tenantDeleteError } = await supabase
+      .from('Najemcy')
+      .delete()
+      .eq('id', najemcaId)
+
+    if (tenantDeleteError) {
+      console.error('Failed to delete tenant:', tenantDeleteError)
+      return
+    }
+
+    // Step 4: Delete the berth itself
+    const { error: berthDeleteError } = await supabase
       .from('MiejscaPostojowe')
       .delete()
       .eq('id', id)
-    if (error) console.error('Deletion failed', error)
+
+    if (berthDeleteError) {
+      console.error('Failed to delete berth:', berthDeleteError)
+      return
+    }
+
+    // Step 5: Update local state
+    setBerths((all) => all.filter((b) => b.id !== id))
     setInfoBerth(null)
   }
 
