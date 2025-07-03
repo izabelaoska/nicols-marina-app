@@ -31,8 +31,12 @@ export default function MarinaCanvas() {
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
-      .select('*, najemca: Najemcy(imię), umowa: Umowy(kwota), uwagi')
-      .then(({ data }) => data && setBerths(data as Miejsce[]))
+      .select('*')
+      .then(({ data, error }) => {
+        console.log('Fetched berths:', data)
+        console.log('Fetch error:', error)
+        if (data) setBerths(data as Miejsce[])
+      })
   }, [])
 
   // fit / pan / zoom state
@@ -57,6 +61,8 @@ export default function MarinaCanvas() {
       y: (vh - background.height * factor) / 2,
     })
   }, [background])
+
+  console.log('Boat icon loaded?', !!boatIcon)
 
   useEffect(() => {
     fitToScreen()
@@ -283,6 +289,7 @@ export default function MarinaCanvas() {
             )}
             {boatIcon &&
               berths.map((b) => {
+                console.log('Rendering berth:', b)
                 const ICON_SIZE = 28
                 return (
                   <KonvaImage
