@@ -47,6 +47,7 @@ export default function MarinaCanvas() {
   const [initialScale, setInitialScale] = useState(1)
   const [scale, setScale] = useState(1)
   const [pos, setPos] = useState({ x: 0, y: 0 })
+  const [infoBerth, setInfoBerth] = useState<Miejsce | null>(null)
 
   const fitToScreen = useCallback(() => {
     const vw = window.innerWidth,
@@ -188,9 +189,9 @@ export default function MarinaCanvas() {
   }
 
   // info dialog state
-  const [infoBerth, setInfoBerth] = useState<Miejsce | null>(null)
+
   const handleDelete = async (id: string) => {
-    // Step 1: Get the najemca_id before deletion
+    // Step 1: Fetch najemca_id
     const { data: berthData, error: fetchError } = await supabase
       .from('MiejscaPostojowe')
       .select('najemca_id')
@@ -204,29 +205,19 @@ export default function MarinaCanvas() {
 
     const najemcaId = berthData.najemca_id
 
-    // Step 2: Delete Umowy for that najemca
+    // Step 2: Delete Umowa only for this miejsce + najemca
     const { error: contractDeleteError } = await supabase
       .from('Umowy')
       .delete()
       .eq('najemca_id', najemcaId)
+      .eq('miejsce_id', id)
 
     if (contractDeleteError) {
       console.error('Failed to delete contract:', contractDeleteError)
       return
     }
 
-    // Step 3: Delete Najemca
-    const { error: tenantDeleteError } = await supabase
-      .from('Najemcy')
-      .delete()
-      .eq('id', najemcaId)
-
-    if (tenantDeleteError) {
-      console.error('Failed to delete tenant:', tenantDeleteError)
-      return
-    }
-
-    // Step 4: Delete the berth itself
+    // Step 3: Delete MiejscePostojowe (the berth)
     const { error: berthDeleteError } = await supabase
       .from('MiejscaPostojowe')
       .delete()
@@ -237,7 +228,26 @@ export default function MarinaCanvas() {
       return
     }
 
-    // Step 5: Update local state
+    // Step 4: Check if the same najemca_id is used elsewhere
+    const { data: otherBerths } = await supabase
+      .from('MiejscaPostojowe')
+      .select('id')
+      .eq('najemca_id', najemcaId)
+
+    if (otherBerths && otherBerths.length === 0) {
+      // Step 5: If not used elsewhere, delete the Najemca
+      const { error: tenantDeleteError } = await supabase
+        .from('Najemcy')
+        .delete()
+        .eq('id', najemcaId)
+
+      if (tenantDeleteError) {
+        console.error('Failed to delete tenant:', tenantDeleteError)
+        return
+      }
+    }
+
+    // Step 6: Update local state
     setBerths((all) => all.filter((b) => b.id !== id))
     setInfoBerth(null)
   }
