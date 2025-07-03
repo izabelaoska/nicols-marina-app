@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 export default function useBoatIcon(
-  size = 32,
+  size = 28,
   color = 'white'
 ): HTMLImageElement | null {
   const [img, setImg] = useState<HTMLImageElement | null>(null)
