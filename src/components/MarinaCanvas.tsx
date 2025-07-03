@@ -19,7 +19,7 @@ export default function MarinaCanvas() {
   // background
   const [background] = useImage('/marina-layout.png')
   // SVG→Image hook
-  const boatIcon = useBoatIcon(24, 'white')
+  const boatIcon = useBoatIcon(32, 'white')
   // fetched berths
   const [berths, setBerths] = useState<Miejsce[]>([])
 
@@ -272,17 +272,17 @@ export default function MarinaCanvas() {
             )}
             {boatIcon &&
               berths.map((b) => {
-                const S = 20
+                const ICON_SIZE = 32
                 return (
                   <KonvaImage
                     key={b.id}
                     image={boatIcon}
                     x={b.position_x}
                     y={b.position_y}
-                    width={S}
-                    height={S}
-                    offsetX={S / 2}
-                    offsetY={S / 2}
+                    width={ICON_SIZE}
+                    height={ICON_SIZE}
+                    offsetX={ICON_SIZE / 2}
+                    offsetY={ICON_SIZE / 2}
                     draggable
                     onDragStart={() => {
                       isDraggingIcon.current = true
