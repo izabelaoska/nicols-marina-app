@@ -7,31 +7,35 @@ import { supabase } from '../lib/supabaseClient'
 import type { DodajMiejscePostojoweValues } from './DodajMiejscePostojoweDialog'
 import { DodajMiejscePostojoweDialog } from './DodajMiejscePostojoweDialog'
 import useBoatIcon from '../hooks/useBoatIcon'
+import { MiejscePostojoweInfoDialog } from './MiejscePostojoweInfoDialog'
 
 type Miejsce = {
   id: string
   position_x: number
   position_y: number
   zajęte: boolean
+  najemca?: { imię: string }
+  umowa?: { kwota: number }
+  uwagi?: string
+  Najemcy?: { imię: string }
+  Umowy?: { kwota: number }
 }
 
 export default function MarinaCanvas() {
-  // background
+  // background + icon
   const [background] = useImage('/marina-layout.png')
-  // SVG→Image hook
   const boatIcon = useBoatIcon(28, 'white')
-  // fetched berths
-  const [berths, setBerths] = useState<Miejsce[]>([])
 
-  // fetch on mount
+  // berths data
+  const [berths, setBerths] = useState<Miejsce[]>([])
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
-      .select('*')
+      .select('*, najemca: Najemcy(imię), umowa: Umowy(kwota), uwagi')
       .then(({ data }) => data && setBerths(data as Miejsce[]))
   }, [])
 
-  // fit + pan/zoom state
+  // fit / pan / zoom state
   const [dims, setDims] = useState({
     w: window.innerWidth,
     h: window.innerHeight,
@@ -40,7 +44,6 @@ export default function MarinaCanvas() {
   const [scale, setScale] = useState(1)
   const [pos, setPos] = useState({ x: 0, y: 0 })
 
-  // recalc on resize/orientation
   const fitToScreen = useCallback(() => {
     const vw = window.innerWidth,
       vh = window.innerHeight
@@ -65,7 +68,6 @@ export default function MarinaCanvas() {
     }
   }, [fitToScreen])
 
-  // clamp pan
   const clampPos = (x: number, y: number) => {
     if (!background) return { x, y }
     const wS = background.width * scale
@@ -80,7 +82,7 @@ export default function MarinaCanvas() {
     }
   }
 
-  // refs for Konva and multi-touch
+  // touch/pinch/pan
   const stageRef = useRef<Konva.Stage>(null)
   const pointers = useRef<Record<number, { x: number; y: number }>>({})
   const lastDist = useRef(0)
@@ -90,7 +92,6 @@ export default function MarinaCanvas() {
   const isDraggingIcon = useRef(false)
   const TAP_THRESHOLD = 6
 
-  // touch start for pan/pinch
   const onTouchStart: React.TouchEventHandler = (e) => {
     for (const t of Array.from(e.changedTouches)) {
       pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
@@ -103,17 +104,16 @@ export default function MarinaCanvas() {
     }
   }
 
-  // touch move: pinch or pan, unless dragging icon
   const onTouchMove: React.TouchEventHandler = (e) => {
     if (isDraggingIcon.current) return
     const ids = Object.keys(pointers.current)
     if (ids.length === 2) {
-      // pinch zoom
       hasPinched.current = true
       e.preventDefault()
       for (const t of Array.from(e.touches)) {
-        if (pointers.current[t.identifier])
+        if (pointers.current[t.identifier]) {
           pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
+        }
       }
       const [p1, p2] = ids.map((id) => pointers.current[+id])
       const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y)
@@ -136,7 +136,6 @@ export default function MarinaCanvas() {
       return
     }
     if (ids.length === 1) {
-      // pan
       const id = +ids[0]
       const prev = pointers.current[id]
       const t = Array.from(e.touches).find((x) => x.identifier === id)
@@ -149,7 +148,6 @@ export default function MarinaCanvas() {
     }
   }
 
-  // touch end cleanup or tap to open dialog
   const onTouchEnd: React.TouchEventHandler = (e) => {
     if (
       !hasPinched.current &&
@@ -161,28 +159,41 @@ export default function MarinaCanvas() {
       const t = e.changedTouches[0]
       const dx = t.clientX - tapStart.current.x
       const dy = t.clientY - tapStart.current.y
-      if (Math.hypot(dx, dy) < TAP_THRESHOLD) openDialogAt(t.clientX, t.clientY)
+      if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
+        openDialogAt(t.clientX, t.clientY)
+      }
     }
-    for (const t of Array.from(e.changedTouches))
+    for (const t of Array.from(e.changedTouches)) {
       delete pointers.current[t.identifier]
+    }
     if (Object.keys(pointers.current).length < 2) lastDist.current = 0
     tapStart.current = null
   }
 
-  // dialog (add berth) state
+  // add berth dialog
   const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
     null
   )
   const openDialogAt = (cx: number, cy: number) =>
     setDialogPos({ x: (cx - pos.x) / scale, y: (cy - pos.y) / scale })
-
-  // desktop click → open dialog
   const handleClick = (e: any) => {
     const { clientX, clientY } = e.evt as MouseEvent
     openDialogAt(clientX, clientY)
   }
 
-  // drag-end on boat → persist & update UI
+  // info dialog state
+  const [infoBerth, setInfoBerth] = useState<Miejsce | null>(null)
+  const handleDelete = async (id: string) => {
+    setBerths((all) => all.filter((b) => b.id !== id))
+    const { error } = await supabase
+      .from('MiejscaPostojowe')
+      .delete()
+      .eq('id', id)
+    if (error) console.error('Deletion failed', error)
+    setInfoBerth(null)
+  }
+
+  // drag boat
   const handleBoatDragEnd = useCallback(async (id: string, e: any) => {
     isDraggingIcon.current = false
     const newX = e.target.x(),
@@ -199,7 +210,7 @@ export default function MarinaCanvas() {
     if (error) console.error('Update failed', error)
   }, [])
 
-  // handleSave from dialog (inserts tenant/contract/berth)
+  // save new berth
   const handleDialogSave = async (
     pos2: { x: number; y: number },
     values: DodajMiejscePostojoweValues
@@ -288,6 +299,8 @@ export default function MarinaCanvas() {
                       isDraggingIcon.current = true
                     }}
                     onDragEnd={(e) => handleBoatDragEnd(b.id, e)}
+                    onClick={() => setInfoBerth(b)}
+                    onTap={() => setInfoBerth(b)}
                   />
                 )
               })}
@@ -301,6 +314,14 @@ export default function MarinaCanvas() {
         onCancel={() => setDialogPos(null)}
         onSave={handleDialogSave}
       />
+
+      {infoBerth && (
+        <MiejscePostojoweInfoDialog
+          berth={infoBerth}
+          onClose={() => setInfoBerth(null)}
+          onDelete={handleDelete}
+        />
+      )}
     </>
   )
 }
