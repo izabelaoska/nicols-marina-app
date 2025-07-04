@@ -82,11 +82,11 @@ export function MiejscePostojoweInfoDialog({
           {Math.round(berth.position_x)}, {Math.round(berth.position_y)}
         </p>
 
-        <div className="modal-action justify-between">
+        <div className="modal-action">
           <button className="btn btn-error" onClick={() => onDelete(berth.id)}>
             Usuń
           </button>
-          <button className="btn btn-secondary" onClick={onClose}>
+          <button className="btn btn-outline" onClick={onClose}>
             Zamknij
           </button>
         </div>
