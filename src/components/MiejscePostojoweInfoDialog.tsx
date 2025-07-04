@@ -33,10 +33,6 @@ export function MiejscePostojoweInfoDialog({
         <h3 className="font-bold text-lg mb-4">Szczegóły miejsca</h3>
 
         <p>
-          <strong>Pozycja:</strong> {Math.round(berth.position_x)},{' '}
-          {Math.round(berth.position_y)}
-        </p>
-        <p>
           <strong>Status:</strong> {berth.zajete ? 'Zajęte' : 'Wolne'}
         </p>
 
@@ -75,12 +71,16 @@ export function MiejscePostojoweInfoDialog({
             )}
           </>
         )}
-
         {berth.uwagi && (
           <p>
             <strong>Uwagi:</strong> {berth.uwagi}
           </p>
         )}
+
+        <p>
+          <strong>Pozycja miejsca postojowego:</strong>{' '}
+          {Math.round(berth.position_x)}, {Math.round(berth.position_y)}
+        </p>
 
         <div className="modal-action justify-between">
           <button className="btn btn-error" onClick={() => onDelete(berth.id)}>
