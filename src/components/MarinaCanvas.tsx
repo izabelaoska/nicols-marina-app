@@ -12,10 +12,10 @@ type Miejsce = {
   id: string
   position_x: number
   position_y: number
-  zajęte: boolean
+  zajete: boolean
   uwagi?: string
   najemca?: {
-    imię: string
+    imie: string
     telefon?: string
     email?: string
     created_at?: string
@@ -34,57 +34,62 @@ export default function MarinaCanvas() {
 
   const [berths, setBerths] = useState<Miejsce[]>([])
 
-  supabase
-    .from('MiejscaPostojowe')
-    .select(
+  useEffect(() => {
+    supabase
+      .from('MiejscaPostojowe')
+      .select(
+        `
+        id,
+        position_x,
+        position_y,
+        zajete,
+        uwagi,
+        Najemcy: najemca_id (
+          imie,
+          telefon,
+          email
+        ),
+        Umowy (
+          kwota,
+          data_od,
+          data_do
+        )
       `
-    id,
-    position_x,
-    position_y,
-    zajęte,
-    uwagi,
-    Najemcy: najemca_id (
-      imię,
-      telefon,
-      email
-    ),
-    Umowy (
-      kwota,
-      data_od,
-      data_do
-    )
-  `
-    )
-    .then(({ data, error }) => {
-      if (error) {
-        console.error('Fetch error:', error)
-        return
-      }
+      )
+      .order('data_od', { foreignTable: 'Umowy', ascending: false })
+      .limit(1, { foreignTable: 'Umowy' })
+      .then(({ data, error }) => {
+        console.log(data)
+        if (error) {
+          console.error('Fetch error:', error)
+          return
+        }
 
-      const mapped = data.map((m: any) => ({
-        id: m.id,
-        position_x: m.position_x,
-        position_y: m.position_y,
-        zajęte: m.zajęte,
-        uwagi: m.uwagi,
-        najemca: m.Najemcy
-          ? {
-              imię: m.Najemcy.imię,
-              telefon: m.Najemcy.telefon,
-              email: m.Najemcy.email,
-            }
-          : undefined,
-        umowa: m.Umowy
-          ? {
-              kwota: m.Umowy.kwota,
-              data_od: m.Umowy.data_od,
-              data_do: m.Umowy.data_do,
-            }
-          : undefined,
-      }))
+        const mapped = data.map((m: any) => ({
+          id: m.id,
+          position_x: m.position_x,
+          position_y: m.position_y,
+          zajete: m.zajete,
+          uwagi: m.uwagi,
+          najemca: m.Najemcy
+            ? {
+                imie: m.Najemcy.imie,
+                telefon: m.Najemcy.telefon,
+                email: m.Najemcy.email,
+              }
+            : undefined,
+          umowa: m.Umowy
+            ? {
+                kwota: m.Umowy.kwota,
+                data_od: m.Umowy.data_od,
+                data_do: m.Umowy.data_do,
+              }
+            : undefined,
+        }))
 
-      setBerths(mapped)
-    })
+        setBerths(mapped)
+      })
+  }, [])
 
   const [dims, setDims] = useState({
     w: window.innerWidth,
@@ -300,7 +305,7 @@ export default function MarinaCanvas() {
   ) => {
     const { data: tenant } = await supabase
       .from('Najemcy')
-      .insert({ imię: values.tenant, telefon: values.phone })
+      .insert({ imie: values.tenant, telefon: values.phone })
       .select()
       .single()
     if (!tenant) return
@@ -320,7 +325,7 @@ export default function MarinaCanvas() {
       .insert({
         position_x: pos2.x,
         position_y: pos2.y,
-        zajęte: true,
+        zajete: true,
         najemca_id: tenant.id,
         uwagi: values.uwagi ?? '',
       })
@@ -384,7 +389,7 @@ export default function MarinaCanvas() {
                     onDragEnd={(e) => handleBoatDragEnd(b.id, e)}
                     onClick={(e) => {
                       e.cancelBubble = true
-                      b.zajęte
+                      b.zajete
                         ? setInfoBerth(b)
                         : openDialogAt(
                             b.position_x * scale + pos.x,
@@ -393,7 +398,7 @@ export default function MarinaCanvas() {
                     }}
                     onTap={(e) => {
                       e.cancelBubble = true
-                      b.zajęte
+                      b.zajete
                         ? setInfoBerth(b)
                         : openDialogAt(
                             b.position_x * scale + pos.x,

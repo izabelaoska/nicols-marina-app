@@ -3,10 +3,10 @@ export interface MiejsceInfoDialogProps {
     id: string
     position_x: number
     position_y: number
-    zajęte: boolean
+    zajete: boolean
     uwagi?: string
     najemca?: {
-      imię: string
+      imie: string
       telefon?: string
       email?: string
       created_at?: string
@@ -37,13 +37,13 @@ export function MiejscePostojoweInfoDialog({
           {Math.round(berth.position_y)}
         </p>
         <p>
-          <strong>Status:</strong> {berth.zajęte ? 'Zajęte' : 'Wolne'}
+          <strong>Status:</strong> {berth.zajete ? 'Zajęte' : 'Wolne'}
         </p>
 
         {berth.najemca && (
           <>
             <p>
-              <strong>Najemca:</strong> {berth.najemca.imię}
+              <strong>Najemca:</strong> {berth.najemca.imie}
             </p>
             {berth.najemca.telefon && (
               <p>
