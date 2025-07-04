@@ -43,6 +43,9 @@ export default function MarinaCanvas() {
   const [scale, setScale] = useState(1)
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [infoBerth, setInfoBerth] = useState<Miejsce | null>(null)
+  const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
+    null
+  )
 
   const fitToScreen = useCallback(() => {
     const vw = window.innerWidth,
@@ -158,10 +161,26 @@ export default function MarinaCanvas() {
       const t = e.changedTouches[0]
       const dx = t.clientX - tapStart.current.x
       const dy = t.clientY - tapStart.current.y
+
       if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
-        openDialogAt(t.clientX, t.clientY)
+        const adjustedRadius = 20 / scale
+        const touchX = (t.clientX - pos.x) / scale
+        const touchY = (t.clientY - pos.y) / scale
+
+        const clickedBerth = berths.find(
+          (b) =>
+            Math.hypot(b.position_x - touchX, b.position_y - touchY) <
+            adjustedRadius
+        )
+
+        if (clickedBerth) {
+          setInfoBerth(clickedBerth)
+        } else {
+          setDialogPos({ x: touchX, y: touchY })
+        }
       }
     }
+
     for (const t of Array.from(e.changedTouches)) {
       delete pointers.current[t.identifier]
     }
@@ -169,9 +188,6 @@ export default function MarinaCanvas() {
     tapStart.current = null
   }
 
-  const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
-    null
-  )
   const openDialogAt = (cx: number, cy: number) =>
     setDialogPos({ x: (cx - pos.x) / scale, y: (cy - pos.y) / scale })
   const handleClick = (e: any) => {
