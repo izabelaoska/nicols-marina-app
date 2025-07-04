@@ -1,4 +1,3 @@
-// src/components/MarinaCanvas.tsx
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { Stage, Layer, Image as KonvaImage } from 'react-konva'
 import Konva from 'konva'

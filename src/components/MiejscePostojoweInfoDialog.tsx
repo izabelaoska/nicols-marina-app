@@ -23,9 +23,6 @@ export function MiejscePostojoweInfoDialog({
         <h3 className="font-bold text-lg mb-4">Szczegóły miejsca</h3>
 
         <p>
-          <strong>ID:</strong> {berth.id}
-        </p>
-        <p>
           <strong>Pozycja:</strong> {Math.round(berth.position_x)},{' '}
           {Math.round(berth.position_y)}
         </p>
