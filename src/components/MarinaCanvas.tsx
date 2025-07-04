@@ -13,11 +13,19 @@ type Miejsce = {
   position_x: number
   position_y: number
   zajęte: boolean
-  najemca?: { imię: string }
-  umowa?: { kwota: number }
   uwagi?: string
-  Najemcy?: { imię: string }
-  Umowy?: { kwota: number }
+  najemca?: {
+    imię: string
+    telefon?: string
+    email?: string
+    created_at?: string
+  }
+  umowa?: {
+    kwota: number
+    data_od?: string
+    data_do?: string
+    created_at?: string
+  }
 }
 
 export default function MarinaCanvas() {
@@ -25,12 +33,55 @@ export default function MarinaCanvas() {
   const boatIcon = useBoatIcon(28, 'white')
 
   const [berths, setBerths] = useState<Miejsce[]>([])
+
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
-      .select('*')
+      .select(
+        `
+      *,
+      najemca:Najemcy (
+        imię,
+        telefon,
+        email,
+        created_at
+      ),
+      umowa:Umowy (
+        kwota,
+        data_od,
+        data_do,
+        created_at
+      )
+    `
+      )
       .then(({ data, error }) => {
-        if (data) setBerths(data as Miejsce[])
+        if (error) {
+          console.error('Fetch error:', error)
+          return
+        }
+
+        if (data) {
+          const mapped = data.map((m: any) => ({
+            ...m,
+            najemca: m.najemca
+              ? {
+                  imię: m.najemca.imię,
+                  telefon: m.najemca.telefon,
+                  email: m.najemca.email,
+                  created_at: m.najemca.created_at,
+                }
+              : undefined,
+            umowa: m.umowa
+              ? {
+                  kwota: m.umowa.kwota,
+                  data_od: m.umowa.data_od,
+                  data_do: m.umowa.data_do,
+                  created_at: m.umowa.created_at,
+                }
+              : undefined,
+          }))
+          setBerths(mapped)
+        }
       })
   }, [])
 

@@ -4,9 +4,19 @@ export interface MiejsceInfoDialogProps {
     position_x: number
     position_y: number
     zajęte: boolean
-    najemca?: { imię: string }
-    umowa?: { kwota: number }
     uwagi?: string
+    najemca?: {
+      imię: string
+      telefon?: string
+      email?: string
+      created_at?: string
+    }
+    umowa?: {
+      kwota: number
+      data_od?: string
+      data_do?: string
+      created_at?: string
+    }
   }
   onClose: () => void
   onDelete: (id: string) => void
@@ -31,15 +41,41 @@ export function MiejscePostojoweInfoDialog({
         </p>
 
         {berth.najemca && (
-          <p>
-            <strong>Najemca:</strong> {berth.najemca.imię}
-          </p>
+          <>
+            <p>
+              <strong>Najemca:</strong> {berth.najemca.imię}
+            </p>
+            {berth.najemca.telefon && (
+              <p>
+                <strong>Telefon:</strong> {berth.najemca.telefon}
+              </p>
+            )}
+            {berth.najemca.email && (
+              <p>
+                <strong>Email:</strong> {berth.najemca.email}
+              </p>
+            )}
+          </>
         )}
+
         {berth.umowa && (
-          <p>
-            <strong>Kwota:</strong> {berth.umowa.kwota} PLN
-          </p>
+          <>
+            <p>
+              <strong>Kwota:</strong> {berth.umowa.kwota} PLN
+            </p>
+            {berth.umowa.data_od && (
+              <p>
+                <strong>Od:</strong> {berth.umowa.data_od}
+              </p>
+            )}
+            {berth.umowa.data_do && (
+              <p>
+                <strong>Do:</strong> {berth.umowa.data_do}
+              </p>
+            )}
+          </>
         )}
+
         {berth.uwagi && (
           <p>
             <strong>Uwagi:</strong> {berth.uwagi}
