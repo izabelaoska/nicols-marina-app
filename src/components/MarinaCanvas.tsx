@@ -78,13 +78,14 @@ export default function MarinaCanvas() {
                 email: m.Najemcy.email,
               }
             : undefined,
-          umowa: m.Umowy
-            ? {
-                kwota: m.Umowy.kwota,
-                data_od: m.Umowy.data_od,
-                data_do: m.Umowy.data_do,
-              }
-            : undefined,
+          umowa:
+            Array.isArray(m.Umowy) && m.Umowy.length > 0
+              ? {
+                  kwota: m.Umowy[0].kwota,
+                  data_od: m.Umowy[0].data_od,
+                  data_do: m.Umowy[0].data_do,
+                }
+              : undefined,
         }))
 
         setBerths(mapped)
