@@ -1,8 +1,6 @@
 export interface MiejsceInfoDialogProps {
   berth: {
     id: string
-    position_x: number
-    position_y: number
     zajete: boolean
     uwagi?: string
     najemca?: {
@@ -29,7 +27,7 @@ export function MiejscePostojoweInfoDialog({
 }: MiejsceInfoDialogProps) {
   return (
     <div className="modal modal-open p-2">
-      <div className="modal-box w-full sm:w-96 p-6">
+      <div className="modal-box w-full sm:w-80 p-6">
         <h3 className="font-bold text-lg mb-4">Szczegóły miejsca</h3>
 
         <p>
@@ -76,11 +74,6 @@ export function MiejscePostojoweInfoDialog({
             <strong>Uwagi:</strong> {berth.uwagi}
           </p>
         )}
-
-        <p>
-          <strong>Pozycja miejsca postojowego:</strong>{' '}
-          {Math.round(berth.position_x)}, {Math.round(berth.position_y)}
-        </p>
 
         <div className="modal-action justify-start">
           <button className="btn btn-error" onClick={() => onDelete(berth.id)}>
