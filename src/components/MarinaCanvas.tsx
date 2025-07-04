@@ -22,24 +22,19 @@ type Miejsce = {
 }
 
 export default function MarinaCanvas() {
-  // background + icon
   const [background] = useImage('/marina-layout.png')
   const boatIcon = useBoatIcon(28, 'white')
 
-  // berths data
   const [berths, setBerths] = useState<Miejsce[]>([])
   useEffect(() => {
     supabase
       .from('MiejscaPostojowe')
       .select('*')
       .then(({ data, error }) => {
-        console.log('Fetched berths:', data)
-        console.log('Fetch error:', error)
         if (data) setBerths(data as Miejsce[])
       })
   }, [])
 
-  // fit / pan / zoom state
   const [dims, setDims] = useState({
     w: window.innerWidth,
     h: window.innerHeight,
@@ -62,8 +57,6 @@ export default function MarinaCanvas() {
       y: (vh - background.height * factor) / 2,
     })
   }, [background])
-
-  console.log('Boat icon loaded?', !!boatIcon)
 
   useEffect(() => {
     fitToScreen()
@@ -89,7 +82,6 @@ export default function MarinaCanvas() {
     }
   }
 
-  // touch/pinch/pan
   const stageRef = useRef<Konva.Stage>(null)
   const pointers = useRef<Record<number, { x: number; y: number }>>({})
   const lastDist = useRef(0)
@@ -177,7 +169,6 @@ export default function MarinaCanvas() {
     tapStart.current = null
   }
 
-  // add berth dialog
   const [dialogPos, setDialogPos] = useState<{ x: number; y: number } | null>(
     null
   )
@@ -189,21 +180,16 @@ export default function MarinaCanvas() {
   }
 
   const handleDelete = async (id: string) => {
-    // Step 1: Fetch najemca_id from MiejscaPostojowe
     const { data: berthData, error: fetchError } = await supabase
       .from('MiejscaPostojowe')
       .select('najemca_id')
       .eq('id', id)
       .single()
-
     if (fetchError || !berthData?.najemca_id) {
       console.error('Could not fetch najemca_id:', fetchError)
       return
     }
-
     const najemcaId = berthData.najemca_id
-
-    // Step 2: Delete dependent records in correct order
     const [
       { error: contractError },
       { error: tenantError },
@@ -213,7 +199,6 @@ export default function MarinaCanvas() {
       supabase.from('Najemcy').delete().eq('id', najemcaId),
       supabase.from('MiejscaPostojowe').delete().eq('id', id),
     ])
-
     if (contractError || tenantError || berthError) {
       console.error('Delete failed:', {
         contractError,
@@ -222,13 +207,10 @@ export default function MarinaCanvas() {
       })
       return
     }
-
-    // Step 3: Update UI
     setBerths((all) => all.filter((b) => b.id !== id))
     setInfoBerth(null)
   }
 
-  // drag boat
   const handleBoatDragEnd = useCallback(async (id: string, e: any) => {
     isDraggingIcon.current = false
     const newX = e.target.x(),
@@ -245,7 +227,6 @@ export default function MarinaCanvas() {
     if (error) console.error('Update failed', error)
   }, [])
 
-  // save new berth
   const handleDialogSave = async (
     pos2: { x: number; y: number },
     values: DodajMiejscePostojoweValues
@@ -318,7 +299,6 @@ export default function MarinaCanvas() {
             )}
             {boatIcon &&
               berths.map((b) => {
-                console.log('Rendering berth:', b)
                 const ICON_SIZE = 28
                 return (
                   <KonvaImage
@@ -335,8 +315,24 @@ export default function MarinaCanvas() {
                       isDraggingIcon.current = true
                     }}
                     onDragEnd={(e) => handleBoatDragEnd(b.id, e)}
-                    onClick={() => setInfoBerth(b)}
-                    onTap={() => setInfoBerth(b)}
+                    onClick={(e) => {
+                      e.cancelBubble = true
+                      b.zajęte
+                        ? setInfoBerth(b)
+                        : openDialogAt(
+                            b.position_x * scale + pos.x,
+                            b.position_y * scale + pos.y
+                          )
+                    }}
+                    onTap={(e) => {
+                      e.cancelBubble = true
+                      b.zajęte
+                        ? setInfoBerth(b)
+                        : openDialogAt(
+                            b.position_x * scale + pos.x,
+                            b.position_y * scale + pos.y
+                          )
+                    }}
                   />
                 )
               })}
