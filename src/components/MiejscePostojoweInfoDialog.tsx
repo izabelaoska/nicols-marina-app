@@ -27,7 +27,7 @@ export function MiejscePostojoweInfoDialog({
 }: MiejsceInfoDialogProps) {
   return (
     <div className="modal modal-open p-2">
-      <div className="modal-box w-80 sm:w-full p-6">
+      <div className="modal-box sm:w-96 w-full p-6">
         <h3 className="font-bold text-lg mb-4">Szczegóły miejsca</h3>
 
         <p>
