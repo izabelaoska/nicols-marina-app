@@ -336,7 +336,63 @@ export default function MarinaCanvas() {
       .select()
       .single()
 
-    if (berth) setBerths((b) => [...b, berth])
+    const { data: updatedBerth, error } = await supabase
+      .from('MiejscaPostojowe')
+      .select(
+        `
+        id,
+        position_x,
+        position_y,
+        zajete,
+        uwagi,
+        Najemcy: najemca_id (
+          imie,
+          telefon,
+          email
+        ),
+        Umowy (
+          kwota,
+          data_od,
+          data_do
+        )
+      `
+      )
+      .eq('id', berth.id)
+      .order('data_od', { foreignTable: 'Umowy', ascending: false })
+      .limit(1, { foreignTable: 'Umowy' })
+      .single()
+
+    if (error || !updatedBerth) {
+      console.error('Failed to refetch new berth:', error)
+      return
+    }
+
+    const mapped = {
+      id: updatedBerth.id,
+      position_x: updatedBerth.position_x,
+      position_y: updatedBerth.position_y,
+      zajete: updatedBerth.zajete,
+      uwagi: updatedBerth.uwagi,
+      najemca:
+        Array.isArray(updatedBerth.Najemcy) && updatedBerth.Najemcy.length > 0
+          ? {
+              imie: updatedBerth.Najemcy[0]?.imie ?? '',
+              telefon: updatedBerth.Najemcy[0]?.telefon ?? '',
+              email: updatedBerth.Najemcy[0]?.email ?? '',
+            }
+          : undefined,
+
+      umowa:
+        Array.isArray(updatedBerth.Umowy) && updatedBerth.Umowy.length > 0
+          ? {
+              kwota: updatedBerth.Umowy[0]?.kwota ?? 0,
+              data_od: updatedBerth.Umowy[0]?.data_od ?? '',
+              data_do: updatedBerth.Umowy[0]?.data_do ?? '',
+            }
+          : undefined,
+    }
+
+    setBerths((b) => [...b, mapped])
     setDialogPos(null)
   }
 
