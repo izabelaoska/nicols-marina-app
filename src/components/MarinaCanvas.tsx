@@ -34,56 +34,57 @@ export default function MarinaCanvas() {
 
   const [berths, setBerths] = useState<Miejsce[]>([])
 
-  useEffect(() => {
-    supabase
-      .from('MiejscaPostojowe')
-      .select(
-        `
-      *,
-      najemca:Najemcy (
-        imię,
-        telefon,
-        email,
-        created_at
-      ),
-      umowa:Umowy (
-        kwota,
-        data_od,
-        data_do,
-        created_at
-      )
-    `
-      )
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('Fetch error:', error)
-          return
-        }
+  supabase
+    .from('MiejscaPostojowe')
+    .select(
+      `
+    id,
+    position_x,
+    position_y,
+    zajęte,
+    uwagi,
+    Najemcy: najemca_id (
+      imię,
+      telefon,
+      email
+    ),
+    Umowy (
+      kwota,
+      data_od,
+      data_do
+    )
+  `
+    )
+    .then(({ data, error }) => {
+      if (error) {
+        console.error('Fetch error:', error)
+        return
+      }
 
-        if (data) {
-          const mapped = data.map((m: any) => ({
-            ...m,
-            najemca: m.najemca
-              ? {
-                  imię: m.najemca.imię,
-                  telefon: m.najemca.telefon,
-                  email: m.najemca.email,
-                  created_at: m.najemca.created_at,
-                }
-              : undefined,
-            umowa: m.umowa
-              ? {
-                  kwota: m.umowa.kwota,
-                  data_od: m.umowa.data_od,
-                  data_do: m.umowa.data_do,
-                  created_at: m.umowa.created_at,
-                }
-              : undefined,
-          }))
-          setBerths(mapped)
-        }
-      })
-  }, [])
+      const mapped = data.map((m: any) => ({
+        id: m.id,
+        position_x: m.position_x,
+        position_y: m.position_y,
+        zajęte: m.zajęte,
+        uwagi: m.uwagi,
+        najemca: m.Najemcy
+          ? {
+              imię: m.Najemcy.imię,
+              telefon: m.Najemcy.telefon,
+              email: m.Najemcy.email,
+            }
+          : undefined,
+        umowa: m.Umowy
+          ? {
+              kwota: m.Umowy.kwota,
+              data_od: m.Umowy.data_od,
+              data_do: m.Umowy.data_do,
+            }
+          : undefined,
+      }))
+
+      setBerths(mapped)
+    })
 
   const [dims, setDims] = useState({
     w: window.innerWidth,
