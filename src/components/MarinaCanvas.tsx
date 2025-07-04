@@ -310,17 +310,7 @@ export default function MarinaCanvas() {
       .select()
       .single()
     if (!tenant) return
-    const { data: contract } = await supabase
-      .from('Umowy')
-      .insert({
-        najemca_id: tenant.id,
-        data_od: values.start,
-        data_do: values.end,
-        kwota: values.amount,
-      })
-      .select()
-      .single()
-    if (!contract) return
+
     const { data: berth } = await supabase
       .from('MiejscaPostojowe')
       .insert({
@@ -332,6 +322,20 @@ export default function MarinaCanvas() {
       })
       .select()
       .single()
+    if (!berth) return
+
+    await supabase
+      .from('Umowy')
+      .insert({
+        najemca_id: tenant.id,
+        miejsce_id: berth.id,
+        data_od: values.start,
+        data_do: values.end,
+        kwota: values.amount,
+      })
+      .select()
+      .single()
+
     if (berth) setBerths((b) => [...b, berth])
     setDialogPos(null)
   }
