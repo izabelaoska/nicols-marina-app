@@ -29,8 +29,8 @@ export function MiejscePostojoweInfoDialog({
   onEdit,
 }: MiejsceInfoDialogProps) {
   return (
-    <div className="modal modal-open p-2">
-      <div className="modal-box w-96 p-6">
+    <div className="modal modal-open p-2 pointer-events-none">
+      <div className="modal-box w-96 p-6 pointer-events-auto">
         <h3 className="font-bold text-lg mb-4">Szczegóły miejsca</h3>
 
         <p>
