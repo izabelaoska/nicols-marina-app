@@ -8,11 +8,13 @@ import { DodajMiejscePostojoweDialog } from './DodajMiejscePostojoweDialog'
 import { MiejscePostojoweInfoDialog } from './MiejscePostojoweInfoDialog'
 import { useStageTransform } from '../hooks/useStageTransform'
 import { useDialogs } from '../hooks/useDialogs'
+import PotwierdzenieArchiwizacjiDialog from './PotwierdzenieArchiwizacjiDialog'
 
 export default function MarinaCanvas() {
   const [background] = useImage('/marina-layout.png')
   const boatIcon = useBoatIcon(28, 'white')
   const [showArchivedAlert, setShowArchivedAlert] = useState(false)
+  const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null)
 
   // Berth data + CRUD
   const {
@@ -48,10 +50,12 @@ export default function MarinaCanvas() {
   if (error) return <div>Błąd: {error.message}</div>
   if (!background || !boatIcon) return null
 
-  const handleArchive = async (id: string) => {
-    await archive(id)
+  const handleConfirmArchive = async () => {
+    if (!pendingArchiveId) return
+    await archive(pendingArchiveId)
     setShowArchivedAlert(true)
     setTimeout(() => setShowArchivedAlert(false), 3000)
+    setPendingArchiveId(null)
   }
 
   return (
@@ -147,10 +151,17 @@ export default function MarinaCanvas() {
         <MiejscePostojoweInfoDialog
           berth={infoBerth}
           onClose={closeInfo}
-          onArchive={handleArchive}
+          onArchive={() => setPendingArchiveId(infoBerth.id)}
           onEdit={() => openEdit(infoBerth)}
         />
       )}
+
+      <PotwierdzenieArchiwizacjiDialog
+        open={pendingArchiveId !== null}
+        message="Na pewno chcesz zarchiwizować to miejsce postojowe?"
+        onCancel={() => setPendingArchiveId(null)}
+        onConfirm={handleConfirmArchive}
+      />
     </div>
   )
 }
