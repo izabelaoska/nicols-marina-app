@@ -86,7 +86,7 @@ export function MiejscePostojoweInfoDialog({
 
         <div className="modal-action justify-start">
           <button
-            className="btn btn-sm btn-warning btn-outline"
+            className="btn btn-sm btn-error btn-outline"
             onClick={() => onArchive(berth.id)}
           >
             Archiwizuj
