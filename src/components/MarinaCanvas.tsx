@@ -82,7 +82,6 @@ export default function MarinaCanvas() {
         style={{ userSelect: 'none' }}
         // Desktop click opens add
         onClick={(e) => handlers.onClick(e, (p) => openAdd(p))}
-        onTap={(e) => handlers.onClick(e, (pos) => openAdd(pos))}
         // Touch-driven pan & pinch
         onTouchStart={handlers.onTouchStart}
         onTouchMove={handlers.onTouchMove}
