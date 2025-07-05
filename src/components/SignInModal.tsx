@@ -34,7 +34,8 @@ export default function SignInModal() {
           <input
             type="email"
             placeholder="you@example.com"
-            className="input input-bordered w-full mt-1"
+            className="input input-bordered  input-validator w-full mt-1"
+            required
             value={email}
             onChange={(e) => setEmail(e.currentTarget.value)}
           />
