@@ -87,7 +87,7 @@ export function MiejscePostojoweInfoDialog({
           <button className="btn btn-error" onClick={() => onDelete(berth.id)}>
             Usuń
           </button>
-          <button className="btn btn-secondary" onClick={onEdit}>
+          <button className="btn btn-info" onClick={onEdit}>
             Edytuj
           </button>
           <button className="btn btn-outline" onClick={onClose}>
