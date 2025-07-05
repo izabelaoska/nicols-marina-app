@@ -232,10 +232,16 @@ export function useMiejscaPostojowe() {
         .eq('id', berth.najemca.id)
         .select()
         .single()
-      console.log('Najemcy.update →', { tenantData, tenantErr })
+      console.log('← Najemcy.update result:', { tenantData, tenantErr })
       if (tenantErr) throw tenantErr
+      console.log('→ Updating Umowy, id:', berth.umowa.id, 'with', {
+        data_od: values.start,
+        data_do: values.end,
+        kwota: values.amount,
+        zaplacono_do: values.zaplacono_do,
+      })
       // 2) Update the specific contract
-      const { error: contractErr } = await supabase
+      const { error: contractErr, data: contractData } = await supabase
         .from('Umowy')
         .update({
           data_od: values.start,
@@ -246,15 +252,20 @@ export function useMiejscaPostojowe() {
         .eq('id', berth.umowa.id)
         .select()
         .single()
+      console.log('← Umowy.update result:', { contractData, contractErr })
       if (contractErr) throw contractErr
 
+      console.log('→ Updating MiejscaPostojowe, id:', berth.id, 'with', {
+        uwagi: values.uwagi ?? '',
+      })
       // 3) Update berth remarks
-      const { error: berthErr } = await supabase
+      const { error: berthErr, data: berthData } = await supabase
         .from('MiejscaPostojowe')
         .update({ uwagi: values.uwagi ?? '' })
         .eq('id', berth.id)
         .select()
         .single()
+      console.log('← MiejscaPostojowe.update result:', { berthData, berthErr })
       if (berthErr) throw berthErr
 
       // 4) Refresh local state
