@@ -85,12 +85,12 @@ export function MiejscePostojoweInfoDialog({
 
         <div className="modal-action justify-start">
           <button
-            className="btn btn-sm btn-error"
+            className="btn btn-sm btn-error btn-outline"
             onClick={() => onDelete(berth.id)}
           >
             Usuń
           </button>
-          <button className="btn btn-sm btn-info" onClick={onEdit}>
+          <button className="btn btn-sm btn-info btn-outline" onClick={onEdit}>
             Edytuj
           </button>
           <button className="btn btn-sm btn-outline" onClick={onClose}>
