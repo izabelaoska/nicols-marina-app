@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Stage, Layer, Image as KonvaImage } from 'react-konva'
 import useImage from 'use-image'
 import useBoatIcon from '../hooks/useBoatIcon'
@@ -44,7 +44,17 @@ export default function MarinaCanvas() {
     editing,
   } = useDialogs({ addBerth, updateBerth, archiveBerth })
 
-  const stageRef = useRef(null)
+  const stageRef = useRef<any>(null)
+
+  // attach raw listeners if needed (optional alternative approach)
+  useEffect(() => {
+    const container = stageRef.current?.container()
+    if (!container) return
+    container.style.touchAction = 'none'
+    return () => {
+      // cleanup style or listeners if you added any
+    }
+  }, [])
 
   if (loading) return <div>Ładowanie...</div>
   if (error) return <div>Błąd: {error.message}</div>
@@ -59,18 +69,7 @@ export default function MarinaCanvas() {
   }
 
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
-        touchAction: 'none',
-        userSelect: 'none',
-      }}
-      onTouchStart={handlers.onTouchStart}
-      onTouchMove={handlers.onTouchMove}
-      onTouchEnd={handlers.onTouchEnd}
-    >
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <Stage
         ref={stageRef}
         width={dims.w}
@@ -79,6 +78,10 @@ export default function MarinaCanvas() {
         y={pos.y}
         scaleX={scale}
         scaleY={scale}
+        style={{ touchAction: 'none', userSelect: 'none' }}
+        onTouchStart={handlers.onTouchStart}
+        onTouchMove={handlers.onTouchMove}
+        onTouchEnd={handlers.onTouchEnd}
         onClick={(e) => handlers.onClick(e, openAdd)}
         onTap={(e) => handlers.onClick(e, openAdd)}
       >
@@ -107,7 +110,6 @@ export default function MarinaCanvas() {
               onDragEnd={(e) =>
                 updatePosition(b.id, e.target.x(), e.target.y())
               }
-              // boat‐icon handlers:
               onClick={(e) => {
                 e.cancelBubble = true
                 b.zajete
@@ -145,9 +147,9 @@ export default function MarinaCanvas() {
             viewBox="0 0 24 24"
           >
             <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
               d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>

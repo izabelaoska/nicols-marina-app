@@ -1,5 +1,5 @@
-// src/hooks/useStageTransform.ts
 import { useState, useEffect, useCallback, useRef } from 'react'
+import type { KonvaEventObject } from 'konva/lib/Node'
 
 type Pos = { x: number; y: number }
 
@@ -19,14 +19,14 @@ export function useStageTransform(background?: HTMLImageElement) {
 
   // clamp helper
   const clampPos = useCallback(
-    (x: number, y: number) => {
+    (x: number, y: number): Pos => {
       if (!background) return { x, y }
       const wS = background.width * scale
       const hS = background.height * scale
-      const minX = Math.min(0, dims.w - wS),
-        maxX = 0
-      const minY = Math.min(0, dims.h - hS),
-        maxY = 0
+      const minX = Math.min(0, dims.w - wS)
+      const maxX = 0
+      const minY = Math.min(0, dims.h - hS)
+      const maxY = 0
       return {
         x: Math.max(minX, Math.min(x, maxX)),
         y: Math.max(minY, Math.min(y, maxY)),
@@ -37,8 +37,8 @@ export function useStageTransform(background?: HTMLImageElement) {
 
   // fit on mount / resize
   const fitToScreen = useCallback(() => {
-    const vw = window.innerWidth,
-      vh = window.innerHeight
+    const vw = window.innerWidth
+    const vh = window.innerHeight
     setDims({ w: vw, h: vh })
     if (!background) return
     const factor = Math.max(vw / background.width, vh / background.height)
@@ -61,26 +61,28 @@ export function useStageTransform(background?: HTMLImageElement) {
   }, [fitToScreen])
 
   // touch handlers
-  const onTouchStart = (e: React.TouchEvent) => {
-    for (const t of Array.from(e.changedTouches)) {
+  const onTouchStart = (e: KonvaEventObject<TouchEvent>) => {
+    const te = e.evt as TouchEvent
+    for (const t of Array.from(te.changedTouches)) {
       pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
     }
     if (Object.keys(pointers.current).length === 1) {
-      const t0 = e.changedTouches[0]
+      const t0 = te.changedTouches[0]
       tapStart.current = { x: t0.clientX, y: t0.clientY }
       hasPinched.current = false
       hasPanned.current = false
     }
   }
 
-  const onTouchMove = (e: React.TouchEvent) => {
+  const onTouchMove = (e: KonvaEventObject<TouchEvent>) => {
+    const te = e.evt as TouchEvent
     if (isDragging.current) return
     const ids = Object.keys(pointers.current)
-    // two‐finger pinch
+    // two-finger pinch
     if (ids.length === 2) {
       hasPinched.current = true
-      e.preventDefault()
-      for (const t of Array.from(e.touches)) {
+      te.preventDefault()
+      for (const t of Array.from(te.touches)) {
         if (pointers.current[t.identifier] != null) {
           pointers.current[t.identifier] = { x: t.clientX, y: t.clientY }
         }
@@ -93,8 +95,8 @@ export function useStageTransform(background?: HTMLImageElement) {
       }
       const ratio = dist / lastDist.current
       const newScale = Math.max(1, scale * ratio)
-      const cx = (p1.x + p2.x) / 2,
-        cy = (p1.y + p2.y) / 2
+      const cx = (p1.x + p2.x) / 2
+      const cy = (p1.y + p2.y) / 2
       setScale(newScale)
       setPos(
         clampPos(
@@ -105,43 +107,43 @@ export function useStageTransform(background?: HTMLImageElement) {
       lastDist.current = dist
       return
     }
-    // one‐finger pan
+    // one-finger pan
     if (ids.length === 1) {
       const id = +ids[0]
       const prev = pointers.current[id]
-      const t = Array.from(e.touches).find((x) => x.identifier === id)
+      const t = Array.from(te.touches).find((x) => x.identifier === id)
       if (!t || !prev) return
-      const dx = t.clientX - prev.x,
-        dy = t.clientY - prev.y
+      const dx = t.clientX - prev.x
+      const dy = t.clientY - prev.y
       if (Math.hypot(dx, dy) > TAP_THRESHOLD) hasPanned.current = true
       setPos(clampPos(pos.x + dx, pos.y + dy))
       pointers.current[id] = { x: t.clientX, y: t.clientY }
     }
   }
 
-  const onTouchEnd = (e: React.TouchEvent) => {
+  const onTouchEnd = (e: KonvaEventObject<TouchEvent>) => {
+    const te = e.evt as TouchEvent
     // detect “tap”
     if (
       !hasPinched.current &&
       !hasPanned.current &&
       tapStart.current &&
       Object.keys(pointers.current).length === 1 &&
-      e.changedTouches.length === 1
+      te.changedTouches.length === 1
     ) {
-      const t0 = e.changedTouches[0]
-      const dx = t0.clientX - tapStart.current.x,
-        dy = t0.clientY - tapStart.current.y
+      const t0 = te.changedTouches[0]
+      const dx = t0.clientX - tapStart.current.x
+      const dy = t0.clientY - tapStart.current.y
       if (Math.hypot(dx, dy) < TAP_THRESHOLD) {
         // this was a tap!
-        // we synthesize a click event
         const x = (t0.clientX - pos.x) / scale
         const y = (t0.clientY - pos.y) / scale
-        // @ts-ignore — we’ll provide onTap handler in our return
+        // @ts-ignore
         handlers.onTap({ x, y })
       }
     }
     // cleanup pointers
-    for (const t of Array.from(e.changedTouches)) {
+    for (const t of Array.from(te.changedTouches)) {
       delete pointers.current[t.identifier]
     }
     if (Object.keys(pointers.current).length < 2) lastDist.current = 0
@@ -159,7 +161,7 @@ export function useStageTransform(background?: HTMLImageElement) {
     onTouchMove,
     onTouchEnd,
     onClick: (e: any, openAdd: (pos: Pos) => void) => onClick(e, openAdd),
-    onTap: (_p: Pos) => {}, // placeholder, will be bound in MarinaCanvas
+    onTap: (_p: Pos) => {},
     setDragging: (d: boolean) => {
       isDragging.current = d
     },
