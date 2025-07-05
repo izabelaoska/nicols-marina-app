@@ -186,7 +186,10 @@ export default function MarinaCanvas() {
       <PotwierdzenieArchiwizacjiDialog
         open={pendingArchiveId !== null}
         message="Na pewno chcesz zarchiwizować to miejsce postojowe?"
-        onCancel={() => setPendingArchiveId(null)}
+        onCancel={() => {
+          setPendingArchiveId(null)
+          closeInfo()
+        }}
         onConfirm={handleConfirmArchive}
       />
     </div>
