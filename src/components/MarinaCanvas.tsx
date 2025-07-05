@@ -119,11 +119,15 @@ export default function MarinaCanvas() {
               }
               onClick={(e) => {
                 e.cancelBubble = true
-                openInfo(b)
+                b.zajete
+                  ? openInfo(b)
+                  : openAdd({ x: b.position_x, y: b.position_y })
               }}
               onTap={(e) => {
                 e.cancelBubble = true
-                openInfo(b)
+                b.zajete
+                  ? openInfo(b)
+                  : openAdd({ x: b.position_x, y: b.position_y })
               }}
             />
           ))}
