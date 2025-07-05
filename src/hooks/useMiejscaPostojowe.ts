@@ -124,7 +124,7 @@ export function useMiejscaPostojowe() {
       amount: number
       start?: string
       end?: string
-      phone?: string
+      phone: string
       uwagi?: string
     }
   ) => {

@@ -5,7 +5,7 @@ export interface DodajMiejscePostojoweValues {
   start?: string
   end?: string
   amount: number
-  phone?: string
+  phone: string
   uwagi?: string
 }
 
@@ -46,14 +46,14 @@ export function DodajMiejscePostojoweDialog({
     onSave(initialPos, {
       tenant: tenant.trim(),
       amount: Number(amount),
+      phone: phone.trim(),
       ...(start.trim() ? { start } : {}),
       ...(end.trim() ? { end } : {}),
-      ...(phone.trim() && { phone: phone.trim() }),
       ...(remarks.trim() ? { uwagi: remarks.trim() } : {}),
     })
   }
 
-  const canSave = !!(tenant.trim() && amount.trim())
+  const canSave = !!(tenant.trim() && amount.trim() && phone.trim())
 
   return (
     <div className={`modal ${open ? 'modal-open' : ''}`}>
@@ -108,7 +108,7 @@ export function DodajMiejscePostojoweDialog({
             </label>
 
             <label className="block">
-              <span className="label-text">Telefon (opcjonalnie)</span>
+              <span className="label-text">Telefon</span>
               <input
                 type="tel"
                 placeholder="+48 123 456 789"
