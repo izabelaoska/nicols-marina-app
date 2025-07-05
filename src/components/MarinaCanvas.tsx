@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Stage, Layer, Image as KonvaImage } from 'react-konva'
 import useImage from 'use-image'
 import useBoatIcon from '../hooks/useBoatIcon'
@@ -12,6 +12,7 @@ import { useDialogs } from '../hooks/useDialogs'
 export default function MarinaCanvas() {
   const [background] = useImage('/marina-layout.png')
   const boatIcon = useBoatIcon(28, 'white')
+  const [showArchivedAlert, setShowArchivedAlert] = useState(false)
 
   // Berth data + CRUD
   const {
@@ -46,6 +47,12 @@ export default function MarinaCanvas() {
   if (loading) return <div>Ładowanie...</div>
   if (error) return <div>Błąd: {error.message}</div>
   if (!background || !boatIcon) return null
+
+  const handleArchive = async (id: string) => {
+    await archive(id)
+    setShowArchivedAlert(true)
+    setTimeout(() => setShowArchivedAlert(false), 3000)
+  }
 
   return (
     <div
@@ -114,11 +121,20 @@ export default function MarinaCanvas() {
         editing={editing}
       />
 
+      {showArchivedAlert && (
+        <div
+          role="alert"
+          className="alert alert-error alert-soft fixed inset-x-0 bottom-4 mx-auto z-50 max-w-lg w-auto px-4"
+        >
+          <span>Miejsce postojowe zarchiwizowane!</span>
+        </div>
+      )}
+
       {infoBerth && (
         <MiejscePostojoweInfoDialog
           berth={infoBerth}
           onClose={closeInfo}
-          onArchive={() => archive(infoBerth.id)}
+          onArchive={handleArchive}
           onEdit={() => openEdit(infoBerth)}
         />
       )}
