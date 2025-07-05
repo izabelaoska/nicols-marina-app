@@ -46,8 +46,21 @@ export default function MarinaCanvas() {
     editing,
   } = useDialogs({ addBerth, updateBerth, archiveBerth })
 
-  // Only genuine taps should open add
-  handlers.onTap = (p: Pos) => openAdd(p)
+  // Stage-level tap: only after true tap (no pan/pinch), uses handlers.onTap bound to openAdd
+  handlers.onTap = (p: Pos) => {
+    // if tapping on an occupied berth, show info instead of add
+    const hit = berths.find((b) => {
+      const dx = p.x - b.position_x
+      const dy = p.y - b.position_y
+      // 14 is half your icon width
+      return Math.hypot(dx, dy) <= 14
+    })
+    if (hit) {
+      openInfo(hit)
+    } else {
+      openAdd(p)
+    }
+  }
 
   const stageRef = useRef<any>(null)
 
@@ -82,6 +95,19 @@ export default function MarinaCanvas() {
         style={{ userSelect: 'none' }}
         // Desktop click opens add
         onClick={(e) => handlers.onClick(e, (p) => openAdd(p))}
+        // Mobile tap (pure tap only)
+        onTap={(e) => {
+          const evt = e.evt as TouchEvent | MouseEvent
+          const clientX = (evt as TouchEvent).changedTouches
+            ? (evt as TouchEvent).changedTouches[0].clientX
+            : (evt as MouseEvent).clientX
+          const clientY = (evt as TouchEvent).changedTouches
+            ? (evt as TouchEvent).changedTouches[0].clientY
+            : (evt as MouseEvent).clientY
+          const x = (clientX - pos.x) / scale
+          const y = (clientY - pos.y) / scale
+          handlers.onTap({ x, y })
+        }}
         // Touch-driven pan & pinch
         onTouchStart={handlers.onTouchStart}
         onTouchMove={handlers.onTouchMove}
