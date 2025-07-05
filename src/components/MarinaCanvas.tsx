@@ -79,6 +79,7 @@ export default function MarinaCanvas() {
     setShowArchivedAlert(true)
     setTimeout(() => setShowArchivedAlert(false), 3000)
     setPendingArchiveId(null)
+    closeInfo()
   }
 
   return (
