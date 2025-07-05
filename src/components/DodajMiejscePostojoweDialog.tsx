@@ -4,6 +4,7 @@ export interface DodajMiejscePostojoweValues {
   tenant: string
   start?: string
   end?: string
+  zaplacone_do: string
   amount: number
   phone: string
   uwagi?: string
@@ -29,6 +30,7 @@ export function DodajMiejscePostojoweDialog({
   const [amount, setAmount] = useState('')
   const [phone, setPhone] = useState('')
   const [remarks, setRemarks] = useState('')
+  const [paidUntil, setPaidUntil] = useState('')
 
   useEffect(() => {
     if (open) {
@@ -38,6 +40,7 @@ export function DodajMiejscePostojoweDialog({
       setAmount('')
       setPhone('')
       setRemarks('')
+      setPaidUntil('')
     }
   }, [open])
 
@@ -47,13 +50,19 @@ export function DodajMiejscePostojoweDialog({
       tenant: tenant.trim(),
       amount: Number(amount),
       phone: phone.trim(),
+      zaplacone_do: paidUntil,
       ...(start.trim() ? { start } : {}),
       ...(end.trim() ? { end } : {}),
       ...(remarks.trim() ? { uwagi: remarks.trim() } : {}),
     })
   }
 
-  const canSave = !!(tenant.trim() && amount.trim() && phone.trim())
+  const canSave = !!(
+    tenant.trim() &&
+    amount.trim() &&
+    phone.trim() &&
+    paidUntil.trim()
+  )
 
   return (
     <div className={`modal ${open ? 'modal-open' : ''}`}>
@@ -104,6 +113,16 @@ export function DodajMiejscePostojoweDialog({
                 className="input input-bordered w-full pr-16"
                 value={amount}
                 onChange={(e) => setAmount(e.currentTarget.value)}
+              />
+            </label>
+
+            <label className="block">
+              <span className="label-text">Zapłacone do</span>
+              <input
+                type="date"
+                className="input input-bordered w-full"
+                value={paidUntil}
+                onChange={(e) => setPaidUntil(e.currentTarget.value)}
               />
             </label>
 

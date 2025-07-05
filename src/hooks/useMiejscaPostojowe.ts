@@ -11,6 +11,7 @@ type Umowa = {
   kwota: number
   data_od?: string
   data_do?: string
+  zaplacone_do: string
 }
 
 export interface MiejscePostojowe {
@@ -50,7 +51,8 @@ export function useMiejscaPostojowe() {
             Umowy (
               kwota,
               data_od,
-              data_do
+              data_do,
+              zaplacone_do
             )
           `
           )
@@ -80,6 +82,7 @@ export function useMiejscaPostojowe() {
                   kwota: m.Umowy[0].kwota,
                   data_od: m.Umowy[0].data_od,
                   data_do: m.Umowy[0].data_do,
+                  zaplacone_do: m.Umowy[0].zaplacone_do,
                 }
               : undefined,
         }))
@@ -126,6 +129,7 @@ export function useMiejscaPostojowe() {
       end?: string
       phone: string
       uwagi?: string
+      zaplacone_do: string
     }
   ) => {
     try {
@@ -158,6 +162,7 @@ export function useMiejscaPostojowe() {
         data_od: values.start,
         data_do: values.end,
         kwota: values.amount,
+        zaplacone_do: values.zaplacone_do,
       })
       if (contractError) throw contractError
 
@@ -179,7 +184,8 @@ export function useMiejscaPostojowe() {
           Umowy (
             kwota,
             data_od,
-            data_do
+            data_do,
+            zaplacone_do
           )
         `
         )
@@ -210,6 +216,7 @@ export function useMiejscaPostojowe() {
                 kwota: newData.Umowy[0].kwota,
                 data_od: newData.Umowy[0].data_od,
                 data_do: newData.Umowy[0].data_do,
+                zaplacone_do: newData.Umowy[0].zaplacone_do,
               }
             : undefined,
       }
