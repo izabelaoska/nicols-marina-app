@@ -10,6 +10,8 @@ import { useStageTransform } from '../hooks/useStageTransform'
 import { useDialogs } from '../hooks/useDialogs'
 import PotwierdzenieArchiwizacjiDialog from './PotwierdzenieArchiwizacjiDialog'
 
+type Pos = { x: number; y: number }
+
 export default function MarinaCanvas() {
   const [background] = useImage('/marina-layout.png')
   const boatIcon = useBoatIcon(28, 'white')
@@ -44,16 +46,13 @@ export default function MarinaCanvas() {
     editing,
   } = useDialogs({ addBerth, updateBerth, archiveBerth })
 
+  handlers.onTap = (p: Pos) => openAdd(p)
+
   const stageRef = useRef<any>(null)
 
-  // attach raw listeners if needed (optional alternative approach)
   useEffect(() => {
     const container = stageRef.current?.container()
-    if (!container) return
-    container.style.touchAction = 'none'
-    return () => {
-      // cleanup style or listeners if you added any
-    }
+    if (container) container.style.touchAction = 'none'
   }, [])
 
   if (loading) return <div>Ładowanie...</div>
@@ -78,12 +77,13 @@ export default function MarinaCanvas() {
         y={pos.y}
         scaleX={scale}
         scaleY={scale}
-        style={{ touchAction: 'none', userSelect: 'none' }}
+        style={{ userSelect: 'none' }}
+        // desktop click only
+        onClick={(e) => handlers.onClick(e, openAdd)}
+        // mobile touch handlers
         onTouchStart={handlers.onTouchStart}
         onTouchMove={handlers.onTouchMove}
         onTouchEnd={handlers.onTouchEnd}
-        onClick={(e) => handlers.onClick(e, openAdd)}
-        onTap={(e) => handlers.onClick(e, openAdd)}
       >
         <Layer>
           <KonvaImage
@@ -107,9 +107,10 @@ export default function MarinaCanvas() {
               offsetY={14}
               draggable
               onDragStart={() => handlers.setDragging(true)}
-              onDragEnd={(e) =>
+              onDragEnd={(e) => {
+                handlers.setDragging(false)
                 updatePosition(b.id, e.target.x(), e.target.y())
-              }
+              }}
               onClick={(e) => {
                 e.cancelBubble = true
                 b.zajete
