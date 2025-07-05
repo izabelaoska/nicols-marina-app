@@ -14,8 +14,15 @@ export default function MarinaCanvas() {
   const boatIcon = useBoatIcon(28, 'white')
 
   // Berth data + CRUD
-  const { berths, loading, error, updatePosition, addBerth, deleteBerth } =
-    useMiejscaPostojowe()
+  const {
+    berths,
+    loading,
+    error,
+    updatePosition,
+    addBerth,
+    deleteBerth,
+    updateBerth,
+  } = useMiejscaPostojowe()
 
   // Pan/zoom/resize
   const { dims, scale, pos, handlers } = useStageTransform(background)
@@ -27,10 +34,12 @@ export default function MarinaCanvas() {
     openInfo,
     closeInfo,
     openAdd,
+    openEdit,
     closeAdd,
     save,
     remove,
-  } = useDialogs({ addBerth, deleteBerth })
+    editing,
+  } = useDialogs({ addBerth, deleteBerth, updateBerth })
 
   const stageRef = useRef(null)
 
@@ -102,6 +111,7 @@ export default function MarinaCanvas() {
         initialPos={dialogPos}
         onSave={(pos, vals: DodajMiejscePostojoweValues) => save(pos, vals)}
         onCancel={closeAdd}
+        editing={editing}
       />
 
       {infoBerth && (
@@ -109,6 +119,7 @@ export default function MarinaCanvas() {
           berth={infoBerth}
           onClose={closeInfo}
           onDelete={() => remove(infoBerth.id)}
+          onEdit={() => openEdit(infoBerth)}
         />
       )}
     </div>

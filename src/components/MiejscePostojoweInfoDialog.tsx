@@ -19,12 +19,14 @@ export interface MiejsceInfoDialogProps {
   }
   onClose: () => void
   onDelete: (id: string) => void
+  onEdit: () => void
 }
 
 export function MiejscePostojoweInfoDialog({
   berth,
   onClose,
   onDelete,
+  onEdit,
 }: MiejsceInfoDialogProps) {
   return (
     <div className="modal modal-open p-2">
@@ -84,6 +86,9 @@ export function MiejscePostojoweInfoDialog({
         <div className="modal-action justify-start">
           <button className="btn btn-error" onClick={() => onDelete(berth.id)}>
             Usuń
+          </button>
+          <button className="btn btn-secondary" onClick={onEdit}>
+            Edytuj
           </button>
           <button className="btn btn-outline" onClick={onClose}>
             Zamknij
