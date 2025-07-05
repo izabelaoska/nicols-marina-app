@@ -96,18 +96,18 @@ export default function MarinaCanvas() {
         // Desktop click opens add
         onClick={(e) => handlers.onClick(e, (p) => openAdd(p))}
         // Mobile tap (pure tap only)
-        onTap={(e) => {
-          const evt = e.evt as TouchEvent | MouseEvent
-          const clientX = (evt as TouchEvent).changedTouches
-            ? (evt as TouchEvent).changedTouches[0].clientX
-            : (evt as MouseEvent).clientX
-          const clientY = (evt as TouchEvent).changedTouches
-            ? (evt as TouchEvent).changedTouches[0].clientY
-            : (evt as MouseEvent).clientY
-          const x = (clientX - pos.x) / scale
-          const y = (clientY - pos.y) / scale
-          handlers.onTap({ x, y })
-        }}
+        // onTap={(e) => {
+        //   const evt = e.evt as TouchEvent | MouseEvent
+        //   const clientX = (evt as TouchEvent).changedTouches
+        //     ? (evt as TouchEvent).changedTouches[0].clientX
+        //     : (evt as MouseEvent).clientX
+        //   const clientY = (evt as TouchEvent).changedTouches
+        //     ? (evt as TouchEvent).changedTouches[0].clientY
+        //     : (evt as MouseEvent).clientY
+        //   const x = (clientX - pos.x) / scale
+        //   const y = (clientY - pos.y) / scale
+        //   handlers.onTap({ x, y })
+        // }}
         // Touch-driven pan & pinch
         onTouchStart={handlers.onTouchStart}
         onTouchMove={handlers.onTouchMove}
