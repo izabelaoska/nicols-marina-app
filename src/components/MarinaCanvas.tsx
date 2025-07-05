@@ -20,8 +20,8 @@ export default function MarinaCanvas() {
     error,
     updatePosition,
     addBerth,
-    deleteBerth,
     updateBerth,
+    archiveBerth,
   } = useMiejscaPostojowe()
 
   // Pan/zoom/resize
@@ -37,9 +37,9 @@ export default function MarinaCanvas() {
     openEdit,
     closeAdd,
     save,
-    remove,
+    archive,
     editing,
-  } = useDialogs({ addBerth, deleteBerth, updateBerth })
+  } = useDialogs({ addBerth, updateBerth, archiveBerth })
 
   const stageRef = useRef(null)
 
@@ -118,7 +118,7 @@ export default function MarinaCanvas() {
         <MiejscePostojoweInfoDialog
           berth={infoBerth}
           onClose={closeInfo}
-          onDelete={() => remove(infoBerth.id)}
+          onArchive={() => archive(infoBerth.id)}
           onEdit={() => openEdit(infoBerth)}
         />
       )}

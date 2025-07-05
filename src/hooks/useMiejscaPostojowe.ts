@@ -58,6 +58,7 @@ export function useMiejscaPostojowe() {
             )
         `
         )
+        .eq('archived', false)
         .order('data_od', { foreignTable: 'Umowy', ascending: false })
         .limit(1, { foreignTable: 'Umowy' })
 
@@ -262,6 +263,40 @@ export function useMiejscaPostojowe() {
       console.error('Error updating berth:', err)
     }
   }
+
+  const archiveBerth = async (id: string) => {
+    // 1) mark the berth itself
+    let { error: err1 } = await supabase
+      .from('MiejscaPostojowe')
+      .update({ archived: true })
+      .eq('id', id)
+    if (err1) throw err1
+
+    // 2) fetch the related tenant ID
+    const { data: row, error: fErr } = await supabase
+      .from('MiejscaPostojowe')
+      .select('najemca_id')
+      .eq('id', id)
+      .single()
+    if (fErr || !row.najemca_id) throw fErr || new Error('No tenant')
+
+    // 3) mark the tenant
+    let { error: err2 } = await supabase
+      .from('Najemcy')
+      .update({ archived: true })
+      .eq('id', row.najemca_id)
+    if (err2) throw err2
+
+    // 4) mark all that tenant’s contracts
+    let { error: err3 } = await supabase
+      .from('Umowy')
+      .update({ archived: true })
+      .eq('najemca_id', row.najemca_id)
+    if (err3) throw err3
+
+    // 5) remove from local state
+    setBerths((all) => all.filter((b) => b.id !== id))
+  }
   // Delete berth, tenant, and contract
   const deleteBerth = async (id: string) => {
     try {
@@ -298,5 +333,6 @@ export function useMiejscaPostojowe() {
     addBerth,
     deleteBerth,
     updateBerth,
+    archiveBerth,
   }
 }

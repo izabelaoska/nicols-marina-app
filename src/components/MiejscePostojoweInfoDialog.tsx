@@ -18,14 +18,14 @@ export interface MiejsceInfoDialogProps {
     }
   }
   onClose: () => void
-  onDelete: (id: string) => void
+  onArchive: (id: string) => void
   onEdit: () => void
 }
 
 export function MiejscePostojoweInfoDialog({
   berth,
   onClose,
-  onDelete,
+  onArchive,
   onEdit,
 }: MiejsceInfoDialogProps) {
   return (
@@ -77,6 +77,7 @@ export function MiejscePostojoweInfoDialog({
             )}
           </>
         )}
+
         {berth.uwagi && (
           <p>
             <strong>Uwagi:</strong> {berth.uwagi}
@@ -85,10 +86,10 @@ export function MiejscePostojoweInfoDialog({
 
         <div className="modal-action justify-start">
           <button
-            className="btn btn-sm btn-error btn-outline"
-            onClick={() => onDelete(berth.id)}
+            className="btn btn-sm btn-warning btn-outline"
+            onClick={() => onArchive(berth.id)}
           >
-            Usuń
+            Archiwizuj
           </button>
           <button className="btn btn-sm btn-info btn-outline" onClick={onEdit}>
             Edytuj

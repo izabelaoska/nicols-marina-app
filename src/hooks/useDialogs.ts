@@ -11,13 +11,13 @@ interface DialogsProps {
     berth: MiejscePostojowe,
     vals: DodajMiejscePostojoweValues
   ) => Promise<void>
-  deleteBerth: (id: string) => Promise<void>
+  archiveBerth: (id: string) => Promise<void>
 }
 
 export function useDialogs({
   addBerth,
   updateBerth,
-  deleteBerth,
+  archiveBerth,
 }: DialogsProps) {
   const [infoBerth, setInfoBerth] = useState<MiejscePostojowe | null>(null)
   const [dialogPos, setDialogPos] = useState<Pos | null>(null)
@@ -54,11 +54,10 @@ export function useDialogs({
     closeAdd()
   }
 
-  const remove = async (id: string) => {
-    await deleteBerth(id)
+  const archive = async (id: string) => {
+    await archiveBerth(id)
     closeInfo()
   }
-
   return {
     infoBerth,
     dialogPos,
@@ -69,6 +68,6 @@ export function useDialogs({
     openEdit,
     closeAdd,
     save,
-    remove,
+    archive,
   }
 }
