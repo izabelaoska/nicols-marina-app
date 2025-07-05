@@ -27,9 +27,7 @@ export default function MarinaCanvas() {
     archiveBerth,
   } = useMiejscaPostojowe()
 
-  // Pan/zoom/resize
   const { dims, scale, pos, handlers } = useStageTransform(background)
-
   // Dialog logic
   const {
     infoBerth,
@@ -43,6 +41,9 @@ export default function MarinaCanvas() {
     archive,
     editing,
   } = useDialogs({ addBerth, updateBerth, archiveBerth })
+
+  // Pan/zoom/resize
+  handlers.onTap = (pos) => openAdd(pos)
 
   const stageRef = useRef(null)
 
