@@ -60,12 +60,12 @@ export function MiejscePostojoweInfoDialog({
             </p>
             {berth.umowa.data_od && (
               <p>
-                <strong>Od:</strong> {berth.umowa.data_od}
+                <strong>Umowa od:</strong> {berth.umowa.data_od}
               </p>
             )}
             {berth.umowa.data_do && (
               <p>
-                <strong>Do:</strong> {berth.umowa.data_do}
+                <strong>Umowa do:</strong> {berth.umowa.data_do}
               </p>
             )}
             {berth.umowa.zaplacono_do && (
