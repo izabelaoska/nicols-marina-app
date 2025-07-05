@@ -226,12 +226,14 @@ export function useMiejscaPostojowe() {
       }
 
       // 1) Update tenant record
-      const { error: tenantErr } = await supabase
+      const { data: tenantData, error: tenantErr } = await supabase
         .from('Najemcy')
         .update({ imie: values.tenant, telefon: values.phone })
         .eq('id', berth.najemca.id)
+        .select()
+        .single()
+      console.log('Najemcy.update →', { tenantData, tenantErr })
       if (tenantErr) throw tenantErr
-
       // 2) Update the specific contract
       const { error: contractErr } = await supabase
         .from('Umowy')
@@ -242,6 +244,8 @@ export function useMiejscaPostojowe() {
           zaplacono_do: values.zaplacono_do,
         })
         .eq('id', berth.umowa.id)
+        .select()
+        .single()
       if (contractErr) throw contractErr
 
       // 3) Update berth remarks
@@ -249,13 +253,14 @@ export function useMiejscaPostojowe() {
         .from('MiejscaPostojowe')
         .update({ uwagi: values.uwagi ?? '' })
         .eq('id', berth.id)
+        .select()
+        .single()
       if (berthErr) throw berthErr
 
       // 4) Refresh local state
       await fetchBerths()
     } catch (err) {
       console.error('Error updating berth:', err)
-      // optionally surface to the user here
     }
   }
   // Delete berth, tenant, and contract
