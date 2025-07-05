@@ -13,8 +13,8 @@ export default function PotwierdzenieArchiwizacjiDialog({
   return (
     <>
       {/* darker overlay */}
-      <div className="fixed inset-0 bg-black bg-opacity-70 z-[1010]" />
-      <div className="modal modal-open fixed inset-0 z-50 pointer-events-none">
+      <div className="fixed inset-0 bg-black bg-opacity-70 z-60" />
+      <div className="modal modal-open fixed inset-0 z-70 pointer-events-none">
         <div className="modal-box pointer-events-auto mx-auto mt-20 bg-white">
           <p className="mb-4">{message}</p>
           <div className="modal-action justify-end">
