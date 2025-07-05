@@ -4,7 +4,7 @@ export interface DodajMiejscePostojoweValues {
   tenant: string
   start?: string
   end?: string
-  zaplacone_do: string
+  zaplacono_do: string
   amount: number
   phone: string
   uwagi?: string
@@ -50,7 +50,7 @@ export function DodajMiejscePostojoweDialog({
       tenant: tenant.trim(),
       amount: Number(amount),
       phone: phone.trim(),
-      zaplacone_do: paidUntil,
+      zaplacono_do: paidUntil,
       ...(start.trim() ? { start } : {}),
       ...(end.trim() ? { end } : {}),
       ...(remarks.trim() ? { uwagi: remarks.trim() } : {}),

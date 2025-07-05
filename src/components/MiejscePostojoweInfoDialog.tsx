@@ -14,7 +14,7 @@ export interface MiejsceInfoDialogProps {
       data_od?: string
       data_do?: string
       created_at?: string
-      zaplacone_do: string
+      zaplacono_do: string
     }
   }
   onClose: () => void
@@ -68,9 +68,9 @@ export function MiejscePostojoweInfoDialog({
                 <strong>Do:</strong> {berth.umowa.data_do}
               </p>
             )}
-            {berth.umowa.zaplacone_do && (
+            {berth.umowa.zaplacono_do && (
               <p>
-                <strong>Zapłacone do:</strong> {berth.umowa.zaplacone_do}
+                <strong>Zapłacone do:</strong> {berth.umowa.zaplacono_do}
               </p>
             )}
           </>
