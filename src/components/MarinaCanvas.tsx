@@ -16,7 +16,7 @@ export default function MarinaCanvas() {
   const [showArchivedAlert, setShowArchivedAlert] = useState(false)
   const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null)
 
-  // CRUD
+  // Berth data + CRUD
   const {
     berths,
     loading,
@@ -27,7 +27,7 @@ export default function MarinaCanvas() {
     archiveBerth,
   } = useMiejscaPostojowe()
 
-  // Pan/zoom
+  // Pan/zoom/resize
   const { dims, scale, pos, handlers } = useStageTransform(background)
 
   // Dialog logic
@@ -49,16 +49,6 @@ export default function MarinaCanvas() {
   if (loading) return <div>Ładowanie...</div>
   if (error) return <div>Błąd: {error.message}</div>
   if (!background || !boatIcon) return null
-
-  const handleStageTap = (e: any) => {
-    // if the user tapped on the _stage_ itself (and not on a boat)
-    if (e.target === e.target.getStage()) {
-      const { x: clientX, y: clientY } = e.evt as MouseEvent
-      const x = (clientX - pos.x) / scale
-      const y = (clientY - pos.y) / scale
-      openAdd({ x, y })
-    }
-  }
 
   const handleConfirmArchive = async () => {
     if (!pendingArchiveId) return
@@ -89,8 +79,8 @@ export default function MarinaCanvas() {
         y={pos.y}
         scaleX={scale}
         scaleY={scale}
-        onClick={handleStageTap}
-        onTap={handleStageTap}
+        onClick={(e) => handlers.onClick(e, openAdd)}
+        onTap={(e) => handlers.onClick(e, openAdd)}
       >
         <Layer>
           <KonvaImage
@@ -117,6 +107,7 @@ export default function MarinaCanvas() {
               onDragEnd={(e) =>
                 updatePosition(b.id, e.target.x(), e.target.y())
               }
+              // boat‐icon handlers:
               onClick={(e) => {
                 e.cancelBubble = true
                 b.zajete
@@ -145,7 +136,7 @@ export default function MarinaCanvas() {
       {showArchivedAlert && (
         <div
           role="alert"
-          className="alert alert-error alert-soft fixed inset-x-0 bottom-4 mx-auto z-50 max-w-lg px-4"
+          className="alert alert-error alert-soft fixed inset-x-0 bottom-4 mx-auto z-50 max-w-lg w-auto px-4"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
