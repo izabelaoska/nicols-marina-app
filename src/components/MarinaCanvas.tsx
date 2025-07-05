@@ -10,6 +10,8 @@ import { useStageTransform } from '../hooks/useStageTransform'
 import { useDialogs } from '../hooks/useDialogs'
 import PotwierdzenieArchiwizacjiDialog from './PotwierdzenieArchiwizacjiDialog'
 
+type Pos = { x: number; y: number }
+
 export default function MarinaCanvas() {
   const [background] = useImage('/marina-layout.png')
   const boatIcon = useBoatIcon(28, 'white')
@@ -44,9 +46,12 @@ export default function MarinaCanvas() {
     editing,
   } = useDialogs({ addBerth, updateBerth, archiveBerth })
 
+  // Only genuine taps should open add
+  handlers.onTap = (p: Pos) => openAdd(p)
+
   const stageRef = useRef<any>(null)
 
-  // Disable browser pinch/zoom
+  // Disable default browser pinch-zoom
   useEffect(() => {
     const container = stageRef.current?.container()
     if (container) container.style.touchAction = 'none'
@@ -76,8 +81,7 @@ export default function MarinaCanvas() {
         scaleY={scale}
         style={{ userSelect: 'none' }}
         // Desktop click opens add
-        onClick={(e) => handlers.onClick(e, (pos) => openAdd(pos))}
-        // Mobile tap on empty space opens add
+        onClick={(e) => handlers.onClick(e, (p) => openAdd(p))}
         onTap={(e) => handlers.onClick(e, (pos) => openAdd(pos))}
         // Touch-driven pan & pinch
         onTouchStart={handlers.onTouchStart}
@@ -110,7 +114,7 @@ export default function MarinaCanvas() {
                 handlers.setDragging(false)
                 updatePosition(b.id, e.target.x(), e.target.y())
               }}
-              // Boat icon handlers: check occupancy
+              // Boat icon handlers: check occupancy on click & tap
               onClick={(e) => {
                 e.cancelBubble = true
                 b.zajete
